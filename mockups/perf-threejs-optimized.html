@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Three.js Tree-shake + Lazy Load Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a1520;
+    color: #e8e6e3;
+    font-family: 'Montserrat', sans-serif;
+    overflow-x: hidden;
+    min-height: 200vh;
+  }
+  #canvas-container {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* Loading indicator */
+  #loader {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #0a1520;
+    transition: opacity 0.6s ease, visibility 0.6s ease;
+  }
+  #loader.hidden {
+    opacity: 0;
+    visibility: hidden;
+  }
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(199, 242, 132, 0.15);
+    border-top-color: #c7f284;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-text {
+    margin-top: 16px;
+    font-size: 14px;
+    color: #8a9bb0;
+    letter-spacing: 0.05em;
+  }
+
+  /* Overlay info */
+  #overlay {
+    position: fixed;
+    top: 24px;
+    left: 24px;
+    z-index: 10;
+    pointer-events: none;
+  }
+  #overlay h1 {
+    font-size: 18px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #c7f284, #ff69b4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+  #overlay .info {
+    font-size: 12px;
+    color: #8a9bb0;
+    line-height: 1.6;
+  }
+  #overlay .info .highlight {
+    color: #c7f284;
+    font-weight: 700;
+  }
+  #overlay .info .tag {
+    display: inline-block;
+    background: rgba(199, 242, 132, 0.1);
+    border: 1px solid rgba(199, 242, 132, 0.2);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    color: #c7f284;
+    margin-top: 4px;
+  }
+
+  /* Bottom-right badge */
+  #badge {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 10;
+    pointer-events: none;
+    text-align: right;
+  }
+  #badge .label {
+    font-size: 11px;
+    color: #8a9bb0;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  #badge .value {
+    font-size: 28px;
+    font-weight: 900;
+    color: #c7f284;
+  }
+  #badge .note {
+    font-size: 11px;
+    color: #8a9bb0;
+  }
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="spinner"></div>
+  <div class="loader-text">Loading Three.js via dynamic import...</div>
+</div>
+
+<div id="canvas-container"></div>
+
+<div id="overlay">
+  <h1>Three.js (Tree-shake + Lazy Load)</h1>
+  <div class="info">
+    <div>Strategy: <span class="highlight">Named imports</span> + <span class="highlight">dynamic import()</span></div>
+    <div>CDN: unpkg.com/three@0.183.2 (ESM)</div>
+    <div style="margin-top: 6px;">
+      <span class="tag">import * as THREE &rarr; Named imports only</span>
+    </div>
+    <div style="margin-top: 4px;">
+      <span class="tag">Sync script &rarr; Lazy loaded after DOMContentLoaded</span>
+    </div>
+  </div>
+</div>
+
+<div id="badge">
+  <div class="label">Estimated Transfer</div>
+  <div class="value">~150 KB</div>
+  <div class="note">vs ~680 KB (full three.module.js)</div>
+  <div class="note" style="margin-top: 4px;">Only: Renderer, Camera, Geometry,</div>
+  <div class="note">ShaderMaterial, Mesh, Color, Vector2</div>
+</div>
+
+<script type="module">
+// ============================================================
+// Dynamic import: Three.js loads AFTER page shell is visible
+// Named imports for tree-shaking (bundler builds would benefit)
+// ============================================================
+
+const loader = document.getElementById('loader');
+
+// State
+let mouseX = 0, mouseY = 0;
+let scrollY = 0;
+
+// Track mouse
+document.addEventListener('mousemove', (e) => {
+  mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+  mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+});
+
+// Track scroll
+window.addEventListener('scroll', () => {
+  scrollY = window.scrollY / window.innerHeight;
+});
+
+// --- Dynamic import ---
+async function init() {
+  const {
+    WebGLRenderer,
+    PerspectiveCamera,
+    Scene,
+    PlaneGeometry,
+    ShaderMaterial,
+    Mesh,
+    Vector2,
+    Color,
+    DoubleSide,
+    Clock
+  } = await import('https://unpkg.com/three@0.183.2/build/three.module.min.js');
+
+  // Hide loader
+  loader.classList.add('hidden');
+
+  // --- Renderer ---
+  const container = document.getElementById('canvas-container');
+  const renderer = new WebGLRenderer({ alpha: true, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  // --- Camera ---
+  const camera = new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 3, 5);
+
+  // --- Scene ---
+  const scene = new Scene();
+
+  // --- Geometry ---
+  const geometry = new PlaneGeometry(20, 20, 128, 128);
+  geometry.rotateX(-Math.PI / 2);
+
+  // --- Shaders ---
+  const vertexShader = `
+    uniform float uTime;
+    uniform vec2 uMouse;
+    uniform float uScroll;
+    varying float vHeight;
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      vec3 pos = position;
+      float wave1 = sin(pos.x * 0.8 + uTime * 0.4) * cos(pos.z * 0.6 + uTime * 0.3) * 0.5;
+      float wave2 = sin(pos.x * 1.5 + uTime * 0.7 + 1.0) * sin(pos.z * 1.2 + uTime * 0.5) * 0.25;
+      float wave3 = cos(pos.x * 2.5 + uTime * 1.0) * sin(pos.z * 2.0 + uTime * 0.8) * 0.12;
+      float dist = length(pos.xz - uMouse * 6.0);
+      float mouseWave = exp(-dist * 0.3) * sin(dist * 2.0 - uTime * 3.0) * 0.6;
+      pos.y = wave1 + wave2 + wave3 + mouseWave;
+      pos.y *= max(0.3, 1.0 - uScroll * 0.5);
+      vHeight = pos.y;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+    }
+  `;
+
+  const fragmentShader = `
+    uniform vec3 uLime;
+    uniform vec3 uPink;
+    uniform float uTime;
+    varying float vHeight;
+    varying vec2 vUv;
+    void main() {
+      float t = smoothstep(-0.6, 0.8, vHeight) * 0.7 + vUv.x * 0.3;
+      vec3 color = mix(uLime, uPink, t);
+      float lineX = abs(fract(vUv.x * 64.0) - 0.5) * 2.0;
+      float lineZ = abs(fract(vUv.y * 64.0) - 0.5) * 2.0;
+      float line = min(lineX, lineZ);
+      float wireAlpha = smoothstep(0.0, 0.08, line);
+      float alpha = mix(0.6, 0.04, wireAlpha);
+      alpha *= smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.7, vUv.x);
+      alpha *= smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+      gl_FragColor = vec4(color, alpha);
+    }
+  `;
+
+  // --- Material ---
+  const lime = new Color('#c7f284');
+  const pink = new Color('#ff69b4');
+
+  const material = new ShaderMaterial({
+    vertexShader,
+    fragmentShader,
+    uniforms: {
+      uTime:   { value: 0 },
+      uMouse:  { value: new Vector2(0, 0) },
+      uScroll: { value: 0 },
+      uLime:   { value: lime },
+      uPink:   { value: pink },
+    },
+    transparent: true,
+    side: DoubleSide,
+  });
+
+  // --- Mesh ---
+  const mesh = new Mesh(geometry, material);
+  scene.add(mesh);
+
+  // --- Clock ---
+  const clock = new Clock();
+
+  // --- Resize ---
+  function onResize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  }
+  window.addEventListener('resize', onResize);
+
+  // --- Animate ---
+  function animate() {
+    requestAnimationFrame(animate);
+
+    const elapsed = clock.getElapsedTime();
+
+    // Camera oscillation
+    camera.position.x = Math.sin(elapsed * 0.1) * 0.3;
+    camera.lookAt(0, 0, 0);
+
+    // Update uniforms
+    material.uniforms.uTime.value = elapsed;
+    material.uniforms.uMouse.value.set(mouseX, mouseY);
+    material.uniforms.uScroll.value = scrollY;
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+}
+
+// Start after DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>

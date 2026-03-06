@@ -1,8 +1,8 @@
 # Design Questions: 美少女Vibes ブランドプロジェクト
 
 ## Status
-- Total: 19 questions (Overall Q1-Q7, Phase 2 P2Q1-P2Q6, Site SQ1-SQ6)
-- Decided: 19 / 19
+- Total: 21 questions (Overall Q1-Q7, Phase 2 P2Q1-P2Q6, Site SQ1-SQ6, Perf PQ1-PQ2)
+- Decided: 21 / 21
 - Pending: 0
 
 ---
@@ -350,6 +350,46 @@ bishojo-vibes.com をいつ Pages に接続するか。
 ### Recommendation: Option A
 ### Decision: Option B（LP 完成後にカスタムドメイン接続 → X 運用開始）
 LP 完成 → ドメイン接続 → X アカウント作成の順序で進める。
+
+---
+
+---
+
+# Performance Optimization — Design Questions
+
+## PQ1: Three.js の扱い
+
+### Context
+Lighthouse Performance スコア 59。JS バンドル 490.80 KB (gzip 123.58 KB) のほぼ全てが Three.js。実際に使用しているのは PlaneGeometry + カスタム ShaderMaterial + カメラ + レンダラーのみで、Three.js の機能の大部分は不要。
+
+### Options
+| Option | Description | Pros | Cons |
+|--------|------------|------|------|
+| A: Raw WebGL に置き換え | カスタムシェーダーはそのまま、ボイラープレートを自前実装 | バンドル 490KB → ~3KB、依存ゼロ | 実装工数 ~150行 |
+| B: TWGL.js に置き換え | 軽量 WebGL ヘルパー使用 | ~15KB gzip、コード簡潔 | 新規依存追加 |
+| C: Three.js tree-shake + lazy | 名前付き import + dynamic import | コード変更最小 | まだ 200KB+ 残る |
+| D: CSS/Canvas 2D | WebGL 廃止 | JS バンドルゼロ | 3D波形テレインの表現力低下 |
+
+### Recommendation: Option A
+### Decision: Option A（Raw WebGL に完全置き換え）
+モック検証で見た目が完全同一であることを確認済み。490KB → ~3KB の最大削減効果。
+
+---
+
+## PQ2: 画像最適化
+
+### Context
+KV画像 4枚 (PNG) 合計 5.9MB + OG画像 3.6MB。Lighthouse LCP・画像読み込み時間に直接影響。
+
+### Options
+| Option | Description | Pros | Cons |
+|--------|------------|------|------|
+| A: WebP変換 + リサイズ | PNG → WebP (80%品質)、幅1200px | 合計 9.5MB → ~600KB (94%削減) | WebP非対応ブラウザ(極少) |
+| B: スキップ | Three.js置き換えのみ | 画像品質維持 | Lighthouse改善が限定的 |
+
+### Recommendation: Option A
+### Decision: Option A（WebP変換 + リサイズ）
+KV画像・OG画像ともにWebP化してサイズ大幅削減。
 
 ---
 

@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raw WebGL - 3D Waveform Terrain</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a1520;
+    color: #e8e6e3;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .overlay {
+    position: fixed;
+    top: 24px;
+    left: 24px;
+    z-index: 10;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .overlay h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .overlay .tag {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #c7f284;
+    background: rgba(199, 242, 132, 0.08);
+    border: 1px solid rgba(199, 242, 132, 0.2);
+    padding: 4px 12px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+
+  .overlay .size {
+    font-size: 12px;
+    color: #8a9bb0;
+  }
+
+  .overlay .size span {
+    color: #c7f284;
+    font-weight: 600;
+  }
+
+  .fps-counter {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 10;
+    font-size: 12px;
+    color: #8a9bb0;
+    font-family: monospace;
+    pointer-events: none;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="gl-canvas"></canvas>
+
+<div class="overlay">
+  <div class="tag">Raw WebGL &mdash; No Library</div>
+  <h1>3D Waveform Terrain</h1>
+  <p class="size">Approx. bundle size: <span>~0 KB</span> (no dependencies)</p>
+</div>
+
+<div class="fps-counter" id="fps">-- fps</div>
+
+<script>
+"use strict";
+
+// ============================================================
+// Raw WebGL 3D Waveform Terrain
+// Equivalent to the Three.js implementation in index.astro
+// ============================================================
+
+(function () {
+
+  // ── Canvas & Context ──
+  const canvas = document.getElementById("gl-canvas");
+  if (!canvas) return;
+
+  const gl = canvas.getContext("webgl", {
+    alpha: true,
+    antialias: true,
+    premultipliedAlpha: true,
+  });
+
+  if (!gl) {
+    console.error("WebGL not supported");
+    return;
+  }
+
+  // ── Resize handling ──
+  let width = 0;
+  let height = 0;
+  let aspect = 1;
+  const dpr = Math.min(window.devicePixelRatio, 2);
+
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    aspect = width / height;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+
+  resize();
+  window.addEventListener("resize", resize);
+
+  // ── Shader sources ──
+  const VERT_SRC = `
+    attribute vec3 aPosition;
+    attribute vec2 aUv;
+
+    uniform mat4 uProjection;
+    uniform mat4 uModelView;
+    uniform float uTime;
+    uniform vec2 uMouse;
+    uniform float uScroll;
+
+    varying float vHeight;
+    varying vec2 vUv;
+
+    void main() {
+      vUv = aUv;
+      vec3 pos = aPosition;
+
+      float wave1 = sin(pos.x * 0.8 + uTime * 0.4) * cos(pos.z * 0.6 + uTime * 0.3) * 0.5;
+      float wave2 = sin(pos.x * 1.5 + uTime * 0.7 + 1.0) * sin(pos.z * 1.2 + uTime * 0.5) * 0.25;
+      float wave3 = cos(pos.x * 2.5 + uTime * 1.0) * sin(pos.z * 2.0 + uTime * 0.8) * 0.12;
+
+      float dist = length(pos.xz - uMouse * 6.0);
+      float mouseWave = exp(-dist * 0.3) * sin(dist * 2.0 - uTime * 3.0) * 0.6;
+
+      pos.y = wave1 + wave2 + wave3 + mouseWave;
+      pos.y *= max(0.3, 1.0 - uScroll * 0.5);
+
+      vHeight = pos.y;
+      gl_Position = uProjection * uModelView * vec4(pos, 1.0);
+    }
+  `;
+
+  const FRAG_SRC = `
+    precision mediump float;
+
+    uniform vec3 uLime;
+    uniform vec3 uPink;
+    uniform float uTime;
+
+    varying float vHeight;
+    varying vec2 vUv;
+
+    void main() {
+      float t = smoothstep(-0.6, 0.8, vHeight) * 0.7 + vUv.x * 0.3;
+      vec3 color = mix(uLime, uPink, t);
+
+      float lineX = abs(fract(vUv.x * 64.0) - 0.5) * 2.0;
+      float lineZ = abs(fract(vUv.y * 64.0) - 0.5) * 2.0;
+      float line = min(lineX, lineZ);
+      float wireAlpha = smoothstep(0.0, 0.08, line);
+
+      float alpha = mix(0.6, 0.04, wireAlpha);
+      alpha *= smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.7, vUv.x);
+      alpha *= smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+
+      gl_FragColor = vec4(color, alpha);
+    }
+  `;
+
+  // ── Compile shader ──
+  function compileShader(type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      console.error("Shader compile error:", gl.getShaderInfoLog(shader));
+      gl.deleteShader(shader);
+      return null;
+    }
+    return shader;
+  }
+
+  // ── Link program ──
+  function createProgram(vertSrc, fragSrc) {
+    const vs = compileShader(gl.VERTEX_SHADER, vertSrc);
+    const fs = compileShader(gl.FRAGMENT_SHADER, fragSrc);
+    if (!vs || !fs) return null;
+
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      console.error("Program link error:", gl.getProgramInfoLog(prog));
+      gl.deleteProgram(prog);
+      return null;
+    }
+
+    // Clean up individual shaders after linking
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+
+    return prog;
+  }
+
+  const program = createProgram(VERT_SRC, FRAG_SRC);
+  if (!program) return;
+
+  // ── Attribute & Uniform locations ──
+  const aPosition = gl.getAttribLocation(program, "aPosition");
+  const aUv = gl.getAttribLocation(program, "aUv");
+
+  const uProjection = gl.getUniformLocation(program, "uProjection");
+  const uModelView = gl.getUniformLocation(program, "uModelView");
+  const uTime = gl.getUniformLocation(program, "uTime");
+  const uMouse = gl.getUniformLocation(program, "uMouse");
+  const uLime = gl.getUniformLocation(program, "uLime");
+  const uPink = gl.getUniformLocation(program, "uPink");
+  const uScroll = gl.getUniformLocation(program, "uScroll");
+
+  // ── Generate plane geometry ──
+  // PlaneGeometry(20, 20, 128, 128) rotated -90deg on X
+  // Three.js PlaneGeometry creates a plane in XY, then rotateX(-PI/2) maps Y -> Z, Z -> -Y
+  // After rotation: x stays, y = -oldZ (which was 0), z = oldY
+  // So effectively the plane lies in XZ with Y=0, x in [-10,10], z in [-10,10]
+
+  const SEGMENTS = 128;
+  const SIZE = 20;
+  const HALF = SIZE / 2;
+  const VERTS_PER_ROW = SEGMENTS + 1; // 129
+  const VERTEX_COUNT = VERTS_PER_ROW * VERTS_PER_ROW;
+
+  // Positions (x, y, z) and UVs (u, v) interleaved would be complex,
+  // so we use separate buffers for clarity.
+
+  const positions = new Float32Array(VERTEX_COUNT * 3);
+  const uvs = new Float32Array(VERTEX_COUNT * 2);
+
+  // Three.js PlaneGeometry(20, 20, 128, 128) in XY plane:
+  //   x: from -10 to 10 (left to right, column index)
+  //   y: from 10 to -10 (top to bottom, row index)
+  //   u: 0 to 1 (left to right)
+  //   v: 0 to 1 (top to bottom) -- but Three.js uses top-to-bottom for v=0..1
+  //
+  // After rotateX(-PI/2):
+  //   newX = oldX, newY = oldZ (=0), newZ = -oldY
+  //
+  // Three.js PlaneGeometry iterates: iy (rows, top to bottom), ix (columns, left to right)
+  //   oldX = ix / segX * width - width/2
+  //   oldY = -(iy / segY * height - height/2)  => height/2 - iy/segY * height
+  //   oldZ = 0
+  //   u = ix / segX
+  //   v = iy / segY  (Three.js: v goes 0 at top to 1 at bottom for PlaneGeometry)
+  //
+  // After rotateX(-PI/2): rotation matrix for -90 deg around X:
+  //   [1,  0,  0 ]   [x]   [ x       ]
+  //   [0,  0,  1 ] * [y] = [ z       ]  => but cos(-90)=0, sin(-90)=-1
+  //   [0, -1,  0 ]   [z]   [-y       ]
+  //
+  // Actually: rotateX(theta) matrix:
+  //   [1,    0,        0    ]
+  //   [0,  cos(t),  -sin(t) ]
+  //   [0,  sin(t),   cos(t) ]
+  //
+  // For theta = -PI/2: cos = 0, sin = -1
+  //   [1,  0,  0]
+  //   [0,  0,  1]
+  //   [0, -1,  0]
+  //
+  // newX = oldX
+  // newY = oldZ = 0
+  // newZ = -oldY
+
+  for (let iy = 0; iy <= SEGMENTS; iy++) {
+    for (let ix = 0; ix <= SEGMENTS; ix++) {
+      const idx = iy * VERTS_PER_ROW + ix;
+
+      const oldX = (ix / SEGMENTS) * SIZE - HALF;
+      const oldY = HALF - (iy / SEGMENTS) * SIZE; // top to bottom
+      // oldZ = 0
+
+      // After rotateX(-PI/2)
+      const x = oldX;
+      const y = 0; // oldZ
+      const z = -oldY;
+
+      positions[idx * 3 + 0] = x;
+      positions[idx * 3 + 1] = y;
+      positions[idx * 3 + 2] = z;
+
+      uvs[idx * 2 + 0] = ix / SEGMENTS;
+      uvs[idx * 2 + 1] = iy / SEGMENTS;
+    }
+  }
+
+  // Indices: two triangles per cell
+  const INDEX_COUNT = SEGMENTS * SEGMENTS * 6;
+  // Use Uint32 if vertex count > 65535, otherwise Uint16
+  const useUint32 = VERTEX_COUNT > 65535;
+  const indices = useUint32
+    ? new Uint32Array(INDEX_COUNT)
+    : new Uint16Array(INDEX_COUNT);
+
+  let ptr = 0;
+  for (let iy = 0; iy < SEGMENTS; iy++) {
+    for (let ix = 0; ix < SEGMENTS; ix++) {
+      const a = iy * VERTS_PER_ROW + ix;
+      const b = a + 1;
+      const c = a + VERTS_PER_ROW;
+      const d = c + 1;
+
+      // Three.js PlaneGeometry winding: a, c, b, c, d, b (CCW when viewed from +Y after rotation)
+      indices[ptr++] = a;
+      indices[ptr++] = c;
+      indices[ptr++] = b;
+      indices[ptr++] = c;
+      indices[ptr++] = d;
+      indices[ptr++] = b;
+    }
+  }
+
+  // Enable OES_element_index_uint if needed
+  if (useUint32) {
+    const ext = gl.getExtension("OES_element_index_uint");
+    if (!ext) {
+      console.error("OES_element_index_uint not supported");
+      return;
+    }
+  }
+
+  // ── Create buffers ──
+  const posBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+  const uvBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, uvBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, uvs, gl.STATIC_DRAW);
+
+  const idxBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+
+  // ── Matrix math utilities ──
+  // All matrices are column-major Float32Arrays (WebGL convention)
+
+  function mat4Identity() {
+    const m = new Float32Array(16);
+    m[0] = 1; m[5] = 1; m[10] = 1; m[15] = 1;
+    return m;
+  }
+
+  function mat4Perspective(fovRad, aspect, near, far) {
+    const f = 1.0 / Math.tan(fovRad / 2);
+    const nf = 1 / (near - far);
+    const m = new Float32Array(16);
+    m[0] = f / aspect;
+    m[5] = f;
+    m[10] = (far + near) * nf;
+    m[11] = -1;
+    m[14] = 2 * far * near * nf;
+    return m;
+  }
+
+  function mat4LookAt(eye, target, up) {
+    const ex = eye[0], ey = eye[1], ez = eye[2];
+    const tx = target[0], ty = target[1], tz = target[2];
+    const ux = up[0], uy = up[1], uz = up[2];
+
+    // Forward (z axis) = normalize(eye - target)
+    let fx = ex - tx, fy = ey - ty, fz = ez - tz;
+    let len = Math.sqrt(fx * fx + fy * fy + fz * fz);
+    if (len > 1e-6) { fx /= len; fy /= len; fz /= len; }
+
+    // Right (x axis) = normalize(cross(up, forward))
+    let rx = uy * fz - uz * fy;
+    let ry = uz * fx - ux * fz;
+    let rz = ux * fy - uy * fx;
+    len = Math.sqrt(rx * rx + ry * ry + rz * rz);
+    if (len > 1e-6) { rx /= len; ry /= len; rz /= len; }
+
+    // True up = cross(forward, right)
+    const tux = fy * rz - fz * ry;
+    const tuy = fz * rx - fx * rz;
+    const tuz = fx * ry - fy * rx;
+
+    const m = new Float32Array(16);
+    // Column-major
+    m[0] = rx;   m[1] = tux;  m[2] = fx;   m[3] = 0;
+    m[4] = ry;   m[5] = tuy;  m[6] = fy;   m[7] = 0;
+    m[8] = rz;   m[9] = tuz;  m[10] = fz;  m[11] = 0;
+    m[12] = -(rx * ex + ry * ey + rz * ez);
+    m[13] = -(tux * ex + tuy * ey + tuz * ez);
+    m[14] = -(fx * ex + fy * ey + fz * ez);
+    m[15] = 1;
+
+    return m;
+  }
+
+  // ── Colors (linear sRGB, matching Three.js Color constructor) ──
+  // Three.js Color('#c7f284') converts hex to linear values by parsing as sRGB [0,1]
+  // Three.js Color stores values in linear space internally via SRGBToLinear conversion
+  // Actually Three.js Color constructor from hex string stores sRGB directly (no conversion)
+  // It only converts when colorSpace is set. Default ShaderMaterial does no conversion.
+  const lime = [0xc7 / 255, 0xf2 / 255, 0x84 / 255]; // [0.78, 0.949, 0.518]
+  const pink = [0xff / 255, 0x69 / 255, 0xb4 / 255]; // [1.0, 0.412, 0.706]
+
+  // ── WebGL state ──
+  gl.enable(gl.BLEND);
+  // Match Three.js default blending (premultiplied alpha)
+  gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.disable(gl.DEPTH_TEST); // depthWrite: false equivalent
+  gl.disable(gl.CULL_FACE);  // DoubleSide equivalent
+
+  // ── Animation state ──
+  let time = 0;
+  const mouse = { x: 0, y: 0 };
+  const smoothMouse = { x: 0, y: 0 };
+  let scrollY = 0;
+  let smoothScroll = 0;
+
+  // Camera: position (0, 3, 5), looking at origin, FOV 60
+  const cameraTarget = [0, 0, 0];
+  const cameraUp = [0, 1, 0];
+  const cameraPos = [0, 3, 5];
+  const fovDeg = 60;
+
+  // ── Input handlers ──
+  window.addEventListener("mousemove", function (e) {
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  });
+
+  window.addEventListener("scroll", function () {
+    scrollY = window.scrollY / window.innerHeight;
+  });
+
+  // ── FPS counter ──
+  const fpsEl = document.getElementById("fps");
+  let frameCount = 0;
+  let fpsTime = performance.now();
+
+  // ── Render loop ──
+  function render() {
+    requestAnimationFrame(render);
+
+    // Update time (matching Three.js += 0.016 per frame)
+    time += 0.016;
+
+    // Smooth mouse (matching Three.js lerp: current + (current - target) * 0.95)
+    // This is: newSmooth = target + (oldSmooth - target) * 0.95
+    // Which means: newSmooth = oldSmooth * 0.95 + target * 0.05
+    smoothMouse.x = smoothMouse.x * 0.95 + mouse.x * 0.05;
+    smoothMouse.y = smoothMouse.y * 0.95 + mouse.y * 0.05;
+
+    // Smooth scroll
+    smoothScroll += (scrollY - smoothScroll) * 0.05;
+
+    // Camera oscillation
+    cameraPos[0] = Math.sin(time * 0.1) * 0.3;
+
+    // Build matrices
+    const projMatrix = mat4Perspective(
+      fovDeg * Math.PI / 180,
+      aspect,
+      0.1,
+      100
+    );
+
+    const viewMatrix = mat4LookAt(cameraPos, cameraTarget, cameraUp);
+
+    // Resize if needed (canvas size already set in resize handler)
+
+    // Clear
+    gl.clearColor(0, 0, 0, 0); // transparent, page background shows through
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // Use program
+    gl.useProgram(program);
+
+    // Set uniforms
+    gl.uniformMatrix4fv(uProjection, false, projMatrix);
+    gl.uniformMatrix4fv(uModelView, false, viewMatrix);
+    gl.uniform1f(uTime, time);
+    gl.uniform2f(uMouse, smoothMouse.x, smoothMouse.y);
+    gl.uniform3f(uLime, lime[0], lime[1], lime[2]);
+    gl.uniform3f(uPink, pink[0], pink[1], pink[2]);
+    gl.uniform1f(uScroll, smoothScroll);
+
+    // Bind position attribute
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+    gl.enableVertexAttribArray(aPosition);
+    gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
+
+    // Bind UV attribute
+    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuf);
+    gl.enableVertexAttribArray(aUv);
+    gl.vertexAttribPointer(aUv, 2, gl.FLOAT, false, 0, 0);
+
+    // Bind index buffer and draw
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+    gl.drawElements(
+      gl.TRIANGLES,
+      INDEX_COUNT,
+      useUint32 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT,
+      0
+    );
+
+    // FPS
+    frameCount++;
+    const now = performance.now();
+    if (now - fpsTime >= 1000) {
+      fpsEl.textContent = frameCount + " fps";
+      frameCount = 0;
+      fpsTime = now;
+    }
+  }
+
+  render();
+
+})();
+</script>
+
+</body>
+</html>

@@ -73,8 +73,8 @@ npm run preview
 ## Current Status
 
 - Phase 1 (ブランド基盤): **完了** — ロゴ・カラー・命名確定
-- Phase 2a (サイト構築): **進行中** — Step 4 LP本実装（調整中）
-- Phase 2b (SNS運用): LP完成後に開始
+- Phase 2a (サイト構築): **進行中** — Step 6 検証中（デプロイ・OGP済み、Performance改善残）
+- Phase 2b (SNS運用): Step 6完了後に開始
 - Phase 3 (有料販売): 未着手
 - Phase 4 (ugc-community連携): PV 10万/月後
 
@@ -87,7 +87,7 @@ npm run preview
 | 技術スタック | Astro (独立リポ) |
 | サイト構成 | LP 1ページ (ティザー戦略) |
 | デプロイ | GitHub 連携自動デプロイ |
-| ドメイン接続 | LP完成後 |
+| ドメイン接続 | **完了** (bishojo-vibes.com) |
 | SNS | @BishojoVibes、SFW運用、毎日1投稿 |
 | LP デザイン | Mock D v3 (Waveform) — Three.js 3D波形テレイン + 4枚KVカルーセル |
 
@@ -98,9 +98,9 @@ npm run preview
 | Step 1: リポ作成 + Astro セットアップ | **完了** |
 | Step 2: デザインモック検討 | **完了** (Mock D v3 採用) |
 | Step 3: キービジュアル制作 (SD リポ) | **完了** (4枚納品) |
-| Step 4: LP 本実装 | **進行中** (調整中) |
-| Step 5: デプロイ + ドメイン接続 | 未着手 |
-| Step 6: 検証 + SNS開始準備 | 未着手 |
+| Step 4: LP 本実装 | **完了** (Lucideアイコン・CTAスライド・OGP対応) |
+| Step 5: デプロイ + ドメイン接続 | **完了** (wrangler CLI + CNAME設定) |
+| Step 6: 検証 + SNS開始準備 | **進行中** (Lighthouse: Perf 59 要改善) |
 
 ## Skills
 

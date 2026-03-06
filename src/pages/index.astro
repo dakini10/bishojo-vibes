@@ -3,10 +3,10 @@ import Base from '../layouts/Base.astro';
 import { Zap, LockOpen, Trophy, BookOpen, Play } from '@lucide/astro';
 
 const kvImages = [
-  { src: '/images/kv-bishoujo-girls_nsfw.png', alt: 'Key Visual 1' },
-  { src: '/images/kv-bishoujo-girls_nsfw_g1.png', alt: 'Key Visual 2' },
-  { src: '/images/kv-bishoujo-girls_nsfw_g2.png', alt: 'Key Visual 3' },
-  { src: '/images/kv-bishoujo-girls_nsfw_g3.png', alt: 'Key Visual 4' },
+  { src: '/images/kv-bishoujo-girls_nsfw.webp', alt: 'Key Visual 1' },
+  { src: '/images/kv-bishoujo-girls_nsfw_g1.webp', alt: 'Key Visual 2' },
+  { src: '/images/kv-bishoujo-girls_nsfw_g2.webp', alt: 'Key Visual 3' },
+  { src: '/images/kv-bishoujo-girls_nsfw_g3.webp', alt: 'Key Visual 4' },
 ];
 
 const doujinSites = [
@@ -26,7 +26,7 @@ const videoSites = [
 
 <Base>
   <!-- Three.js canvas -->
-  <canvas id="three-canvas"></canvas>
+  <canvas id="gl-canvas"></canvas>
 
   <div class="content">
     <!-- Hero -->
@@ -199,7 +199,7 @@ const videoSites = [
 
 <style>
   /* ── Three.js Canvas ── */
-  #three-canvas {
+  #gl-canvas {
     position: fixed;
     inset: 0;
     z-index: 0;
@@ -987,6 +987,10 @@ const videoSites = [
   }
 
   @media (max-width: 600px) {
+    .cta-slide-text {
+      font-size: 16px;
+      letter-spacing: 1px;
+    }
     .sns-list {
       flex-direction: column;
       align-items: center;
@@ -999,121 +1003,208 @@ const videoSites = [
 </style>
 
 <script>
-  import * as THREE from 'three';
-
-  // ── Three.js — 3D Waveform Terrain ──
+  // ── Raw WebGL — 3D Waveform Terrain ──
   (function () {
-    const canvas = document.getElementById('three-canvas') as HTMLCanvasElement;
+    const canvas = document.getElementById('gl-canvas') as HTMLCanvasElement;
     if (!canvas) return;
 
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    const gl = canvas.getContext('webgl', { alpha: true, antialias: true, premultipliedAlpha: true });
+    if (!gl) return;
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 3, 5);
-    camera.lookAt(0, 0, 0);
+    let width = 0, height = 0, aspect = 1;
+    const dpr = Math.min(window.devicePixelRatio, 2);
 
-    const geo = new THREE.PlaneGeometry(20, 20, 128, 128);
-    geo.rotateX(-Math.PI * 0.5);
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      aspect = width / height;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    resize();
+    window.addEventListener('resize', resize);
 
-    const mat = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uMouse: { value: new THREE.Vector2(0, 0) },
-        uLime: { value: new THREE.Color('#c7f284') },
-        uPink: { value: new THREE.Color('#ff69b4') },
-        uScroll: { value: 0 },
-      },
-      vertexShader: `
-        uniform float uTime;
-        uniform vec2 uMouse;
-        uniform float uScroll;
-        varying float vHeight;
-        varying vec2 vUv;
+    // ── Shaders ──
+    const VERT = `
+      attribute vec3 aPosition;
+      attribute vec2 aUv;
+      uniform mat4 uProjection;
+      uniform mat4 uModelView;
+      uniform float uTime;
+      uniform vec2 uMouse;
+      uniform float uScroll;
+      varying float vHeight;
+      varying vec2 vUv;
+      void main() {
+        vUv = aUv;
+        vec3 pos = aPosition;
+        float wave1 = sin(pos.x * 0.8 + uTime * 0.4) * cos(pos.z * 0.6 + uTime * 0.3) * 0.5;
+        float wave2 = sin(pos.x * 1.5 + uTime * 0.7 + 1.0) * sin(pos.z * 1.2 + uTime * 0.5) * 0.25;
+        float wave3 = cos(pos.x * 2.5 + uTime * 1.0) * sin(pos.z * 2.0 + uTime * 0.8) * 0.12;
+        float dist = length(pos.xz - uMouse * 6.0);
+        float mouseWave = exp(-dist * 0.3) * sin(dist * 2.0 - uTime * 3.0) * 0.6;
+        pos.y = wave1 + wave2 + wave3 + mouseWave;
+        pos.y *= max(0.3, 1.0 - uScroll * 0.5);
+        vHeight = pos.y;
+        gl_Position = uProjection * uModelView * vec4(pos, 1.0);
+      }
+    `;
+    const FRAG = `
+      precision mediump float;
+      uniform vec3 uLime;
+      uniform vec3 uPink;
+      uniform float uTime;
+      varying float vHeight;
+      varying vec2 vUv;
+      void main() {
+        float t = smoothstep(-0.6, 0.8, vHeight) * 0.7 + vUv.x * 0.3;
+        vec3 color = mix(uLime, uPink, t);
+        float lineX = abs(fract(vUv.x * 64.0) - 0.5) * 2.0;
+        float lineZ = abs(fract(vUv.y * 64.0) - 0.5) * 2.0;
+        float line = min(lineX, lineZ);
+        float wireAlpha = smoothstep(0.0, 0.08, line);
+        float alpha = mix(0.6, 0.04, wireAlpha);
+        alpha *= smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.7, vUv.x);
+        alpha *= smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+        gl_FragColor = vec4(color, alpha);
+      }
+    `;
 
-        void main() {
-          vUv = uv;
-          vec3 pos = position;
+    function compileShader(type: number, src: string) {
+      const s = gl.createShader(type)!;
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      return s;
+    }
+    const vs = compileShader(gl.VERTEX_SHADER, VERT);
+    const fs = compileShader(gl.FRAGMENT_SHADER, FRAG);
+    const prog = gl.createProgram()!;
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
 
-          float wave1 = sin(pos.x * 0.8 + uTime * 0.4) * cos(pos.z * 0.6 + uTime * 0.3) * 0.5;
-          float wave2 = sin(pos.x * 1.5 + uTime * 0.7 + 1.0) * sin(pos.z * 1.2 + uTime * 0.5) * 0.25;
-          float wave3 = cos(pos.x * 2.5 + uTime * 1.0) * sin(pos.z * 2.0 + uTime * 0.8) * 0.12;
+    const aPosition = gl.getAttribLocation(prog, 'aPosition');
+    const aUv = gl.getAttribLocation(prog, 'aUv');
+    const uProjection = gl.getUniformLocation(prog, 'uProjection');
+    const uModelView = gl.getUniformLocation(prog, 'uModelView');
+    const uTimeLoc = gl.getUniformLocation(prog, 'uTime');
+    const uMouseLoc = gl.getUniformLocation(prog, 'uMouse');
+    const uLimeLoc = gl.getUniformLocation(prog, 'uLime');
+    const uPinkLoc = gl.getUniformLocation(prog, 'uPink');
+    const uScrollLoc = gl.getUniformLocation(prog, 'uScroll');
 
-          float dist = length(pos.xz - uMouse * 6.0);
-          float mouseWave = exp(-dist * 0.3) * sin(dist * 2.0 - uTime * 3.0) * 0.6;
+    // ── Geometry: PlaneGeometry(20, 20, 128, 128) rotated -PI/2 on X ──
+    const SEG = 128, SZ = 20, HALF = SZ / 2, VPR = SEG + 1, VCNT = VPR * VPR;
+    const positions = new Float32Array(VCNT * 3);
+    const uvs = new Float32Array(VCNT * 2);
+    for (let iy = 0; iy <= SEG; iy++) {
+      for (let ix = 0; ix <= SEG; ix++) {
+        const idx = iy * VPR + ix;
+        positions[idx * 3] = (ix / SEG) * SZ - HALF;
+        positions[idx * 3 + 1] = 0;
+        positions[idx * 3 + 2] = -((HALF) - (iy / SEG) * SZ);
+        uvs[idx * 2] = ix / SEG;
+        uvs[idx * 2 + 1] = iy / SEG;
+      }
+    }
+    const ICNT = SEG * SEG * 6;
+    const indices = new Uint16Array(ICNT);
+    let ptr = 0;
+    for (let iy = 0; iy < SEG; iy++) {
+      for (let ix = 0; ix < SEG; ix++) {
+        const a = iy * VPR + ix, b = a + 1, c = a + VPR, d = c + 1;
+        indices[ptr++] = a; indices[ptr++] = c; indices[ptr++] = b;
+        indices[ptr++] = c; indices[ptr++] = d; indices[ptr++] = b;
+      }
+    }
 
-          pos.y = wave1 + wave2 + wave3 + mouseWave;
-          pos.y *= max(0.3, 1.0 - uScroll * 0.5);
+    const posBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+    const uvBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, uvs, gl.STATIC_DRAW);
+    const idxBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
-          vHeight = pos.y;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 uLime;
-        uniform vec3 uPink;
-        uniform float uTime;
-        varying float vHeight;
-        varying vec2 vUv;
+    // ── Matrix math ──
+    function mat4Perspective(fov: number, asp: number, near: number, far: number) {
+      const f = 1 / Math.tan(fov / 2), nf = 1 / (near - far), m = new Float32Array(16);
+      m[0] = f / asp; m[5] = f; m[10] = (far + near) * nf; m[11] = -1; m[14] = 2 * far * near * nf;
+      return m;
+    }
+    function mat4LookAt(eye: number[], tgt: number[], up: number[]) {
+      let fx = eye[0] - tgt[0], fy = eye[1] - tgt[1], fz = eye[2] - tgt[2];
+      let len = Math.sqrt(fx * fx + fy * fy + fz * fz);
+      if (len > 1e-6) { fx /= len; fy /= len; fz /= len; }
+      let rx = up[1] * fz - up[2] * fy, ry = up[2] * fx - up[0] * fz, rz = up[0] * fy - up[1] * fx;
+      len = Math.sqrt(rx * rx + ry * ry + rz * rz);
+      if (len > 1e-6) { rx /= len; ry /= len; rz /= len; }
+      const tux = fy * rz - fz * ry, tuy = fz * rx - fx * rz, tuz = fx * ry - fy * rx;
+      const m = new Float32Array(16);
+      m[0] = rx; m[1] = tux; m[2] = fx; m[4] = ry; m[5] = tuy; m[6] = fy;
+      m[8] = rz; m[9] = tuz; m[10] = fz;
+      m[12] = -(rx * eye[0] + ry * eye[1] + rz * eye[2]);
+      m[13] = -(tux * eye[0] + tuy * eye[1] + tuz * eye[2]);
+      m[14] = -(fx * eye[0] + fy * eye[1] + fz * eye[2]);
+      m[15] = 1;
+      return m;
+    }
 
-        void main() {
-          float t = smoothstep(-0.6, 0.8, vHeight) * 0.7 + vUv.x * 0.3;
-          vec3 color = mix(uLime, uPink, t);
+    // ── State ──
+    const lime = [0xc7 / 255, 0xf2 / 255, 0x84 / 255];
+    const pink = [0xff / 255, 0x69 / 255, 0xb4 / 255];
+    gl.enable(gl.BLEND);
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
 
-          float lineX = abs(fract(vUv.x * 64.0) - 0.5) * 2.0;
-          float lineZ = abs(fract(vUv.y * 64.0) - 0.5) * 2.0;
-          float line = min(lineX, lineZ);
-          float wireAlpha = smoothstep(0.0, 0.08, line);
+    let time = 0;
+    const mouse = { x: 0, y: 0 }, sm = { x: 0, y: 0 };
+    let scrollVal = 0, smoothScroll = 0;
+    const camPos = [0, 3, 5], camTgt = [0, 0, 0], camUp = [0, 1, 0];
 
-          float alpha = mix(0.6, 0.04, wireAlpha);
-          alpha *= smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.7, vUv.x);
-          alpha *= smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
-
-          gl_FragColor = vec4(color, alpha);
-        }
-      `,
-      transparent: true,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    });
-
-    const mesh = new THREE.Mesh(geo, mat);
-    scene.add(mesh);
-
-    const mouse = { x: 0, y: 0 };
     window.addEventListener('mousemove', (e) => {
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
     });
+    window.addEventListener('scroll', () => { scrollVal = window.scrollY / window.innerHeight; });
 
-    let scrollY = 0;
-    window.addEventListener('scroll', () => {
-      scrollY = window.scrollY / window.innerHeight;
-    });
+    function render() {
+      requestAnimationFrame(render);
+      time += 0.016;
+      sm.x = sm.x * 0.95 + mouse.x * 0.05;
+      sm.y = sm.y * 0.95 + mouse.y * 0.05;
+      smoothScroll += (scrollVal - smoothScroll) * 0.05;
+      camPos[0] = Math.sin(time * 0.1) * 0.3;
 
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.useProgram(prog);
+      gl.uniformMatrix4fv(uProjection, false, mat4Perspective(60 * Math.PI / 180, aspect, 0.1, 100));
+      gl.uniformMatrix4fv(uModelView, false, mat4LookAt(camPos, camTgt, camUp));
+      gl.uniform1f(uTimeLoc, time);
+      gl.uniform2f(uMouseLoc, sm.x, sm.y);
+      gl.uniform3f(uLimeLoc, lime[0], lime[1], lime[2]);
+      gl.uniform3f(uPinkLoc, pink[0], pink[1], pink[2]);
+      gl.uniform1f(uScrollLoc, smoothScroll);
 
-    function animate() {
-      requestAnimationFrame(animate);
-      mat.uniforms.uTime.value += 0.016;
-      mat.uniforms.uMouse.value.set(
-        mouse.x + (mat.uniforms.uMouse.value.x - mouse.x) * 0.95,
-        mouse.y + (mat.uniforms.uMouse.value.y - mouse.y) * 0.95,
-      );
-      mat.uniforms.uScroll.value += (scrollY - mat.uniforms.uScroll.value) * 0.05;
-
-      camera.position.x = Math.sin(mat.uniforms.uTime.value * 0.1) * 0.3;
-      camera.lookAt(0, 0, 0);
-
-      renderer.render(scene, camera);
+      gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+      gl.enableVertexAttribArray(aPosition);
+      gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, uvBuf);
+      gl.enableVertexAttribArray(aUv);
+      gl.vertexAttribPointer(aUv, 2, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+      gl.drawElements(gl.TRIANGLES, ICNT, gl.UNSIGNED_SHORT, 0);
     }
-    animate();
+    render();
   })();
 
   // ── Logo wave ──
