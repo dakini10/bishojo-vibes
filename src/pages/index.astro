@@ -68,7 +68,7 @@ const videoSites = [
             {kvImages.map((kv, i) => (
               <div class="carousel-slide">
                 <span class="slide-num">{String(i + 1).padStart(2, '0')} / {String(kvImages.length + 1).padStart(2, '0')}</span>
-                <img src={kv.src} alt={kv.alt} loading={i === 0 ? 'eager' : 'lazy'} />
+                <img src={kv.src} alt={kv.alt} width="1536" height="864" loading={i === 0 ? 'eager' : 'lazy'} />
               </div>
             ))}
             <div class="carousel-slide carousel-slide-cta">
@@ -225,8 +225,7 @@ const videoSites = [
     display: flex;
     align-items: baseline;
     justify-content: center;
-    opacity: 0;
-    animation: heroReveal 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+    animation: heroReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
   }
 
   .logo-jp {
@@ -245,7 +244,7 @@ const videoSites = [
 
   .logo-wave-wrap {
     opacity: 0;
-    animation: fadeIn 1s ease 1.8s forwards;
+    animation: fadeIn 0.6s ease 0.6s forwards;
     margin-top: 4px;
   }
 
@@ -258,7 +257,7 @@ const videoSites = [
     text-transform: uppercase;
     margin-top: 40px;
     opacity: 0;
-    animation: fadeInUp 1s ease 2.2s forwards;
+    animation: fadeInUp 0.6s ease 0.8s forwards;
   }
 
   .scroll-cue {
@@ -271,7 +270,7 @@ const videoSites = [
     align-items: center;
     gap: 10px;
     opacity: 0;
-    animation: fadeIn 1s ease 3s forwards;
+    animation: fadeIn 0.6s ease 1.0s forwards;
   }
 
   .scroll-cue span {
@@ -875,7 +874,7 @@ const videoSites = [
 
   .cta-sub {
     font-family: var(--font-brand);
-    font-weight: 300;
+    font-weight: 400;
     font-size: 15px;
     color: var(--bv-text-muted);
     max-width: 480px;
@@ -951,8 +950,8 @@ const videoSites = [
 
   /* ── Animations ── */
   @keyframes heroReveal {
-    0% { opacity: 0; transform: translateY(30px) scale(0.97); filter: blur(8px); }
-    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    0% { transform: translateY(20px) scale(0.98); filter: blur(6px); }
+    100% { transform: translateY(0) scale(1); filter: blur(0); }
   }
 
   @keyframes fadeIn {
@@ -1003,8 +1002,8 @@ const videoSites = [
 </style>
 
 <script>
-  // ── Raw WebGL — 3D Waveform Terrain ──
-  (function () {
+  // ── Raw WebGL — 3D Waveform Terrain (deferred) ──
+  function initWebGL() {
     const canvas = document.getElementById('gl-canvas') as HTMLCanvasElement;
     if (!canvas) return;
 
@@ -1205,7 +1204,7 @@ const videoSites = [
       gl.drawElements(gl.TRIANGLES, ICNT, gl.UNSIGNED_SHORT, 0);
     }
     render();
-  })();
+  }
 
   // ── Logo wave ──
   function initLogoWave() {
@@ -1237,7 +1236,7 @@ const videoSites = [
     const len = w + 60;
     poly.setAttribute('stroke-dasharray', String(len));
     poly.setAttribute('stroke-dashoffset', String(len));
-    poly.style.animation = 'waveDash 2s cubic-bezier(0.16, 1, 0.3, 1) 1.5s forwards';
+    poly.style.animation = 'waveDash 1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards';
     svgEl.appendChild(poly);
   }
 
@@ -1313,4 +1312,11 @@ const videoSites = [
     initCarousel();
     setTimeout(initReveal, 100);
   });
+
+  // Defer WebGL to avoid blocking main thread
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => initWebGL(), { timeout: 2000 });
+  } else {
+    setTimeout(initWebGL, 200);
+  }
 </script>
