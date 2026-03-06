@@ -1,0 +1,77 @@
+---
+/**
+ * BiVi Logo with baseline wave motif.
+ * Renders the "BiVi" text + animated wave using SVG.
+ * Based on LOGO_SPEC.md v0.1.
+ */
+---
+
+<div class="bivi-logo">
+  <!-- Shared gradient definition -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0">
+    <defs>
+      <linearGradient id="wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="var(--bv-lime, #c7f284)" />
+        <stop offset="100%" stop-color="var(--bv-pink, #ff69b4)" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="logo-text" id="bivi-text">BiVi</div>
+  <svg id="bivi-wave" xmlns="http://www.w3.org/2000/svg" height="30" overflow="visible"></svg>
+</div>
+
+<style>
+  .bivi-logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .logo-text {
+    font-family: var(--font-brand, 'Montserrat', sans-serif);
+    font-weight: 900;
+    font-size: clamp(48px, 12vw, 84px);
+    color: var(--bv-text, #e8e6e3);
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+</style>
+
+<script>
+  function initWave() {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const PHI = 1 / (1 + 1.618); // ≈ 0.382
+
+    const textEl = document.getElementById('bivi-text');
+    const svgEl = document.getElementById('bivi-wave');
+    if (!textEl || !svgEl) return;
+
+    const w = textEl.getBoundingClientRect().width;
+    svgEl.setAttribute('width', String(w));
+    svgEl.setAttribute('viewBox', `0 0 ${w} 30`);
+
+    const y = 15;
+    const c = w * PHI;
+    const pts: [number, number][] = [
+      [0, y], [c - 24, y], [c - 16, y],
+      [c - 8, 5], [c, 25], [c + 8, 10],
+      [c + 16, y], [w, y],
+    ];
+
+    const poly = document.createElementNS(svgNS, 'polyline');
+    poly.setAttribute(
+      'points',
+      pts.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')
+    );
+    poly.setAttribute('stroke', 'url(#wave-grad)');
+    poly.setAttribute('stroke-width', '7');
+    poly.setAttribute('fill', 'none');
+    poly.setAttribute('stroke-linecap', 'round');
+    poly.setAttribute('stroke-linejoin', 'round');
+    svgEl.appendChild(poly);
+  }
+
+  document.fonts.ready.then(initWave);
+</script>

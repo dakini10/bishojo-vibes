@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock F: Cinematic — フルスクリーン・シネマティック体験</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700;900&family=M+PLUS+1p:wght@900&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bv-lime: #c7f284;
+  --bv-pink: #ff69b4;
+  --bv-bg: #060c14;
+  --bv-surface: #0d1a28;
+  --bv-border: #162a3e;
+  --bv-text: #eae8e5;
+  --bv-text-muted: #7d8e9f;
+  --bv-text-dim: #4a5968;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  scroll-snap-type: y mandatory;
+}
+
+body {
+  background: var(--bv-bg);
+  color: var(--bv-text);
+  font-family: 'Montserrat', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Concept Badge ── */
+.concept-badge {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  background: rgba(13, 26, 40, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--bv-border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--bv-text-muted);
+  z-index: 200;
+}
+.concept-badge strong { color: var(--bv-lime); }
+
+/* ── Progress bar ── */
+.progress-track {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 100;
+  background: rgba(22, 42, 62, 0.5);
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--bv-lime), var(--bv-pink));
+  transition: width 0.1s linear;
+  box-shadow: 0 0 10px var(--bv-lime);
+}
+
+/* ── Side nav dots ── */
+.side-nav {
+  position: fixed;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.side-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bv-text-dim);
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+  padding: 0;
+}
+
+.side-dot.active {
+  background: var(--bv-lime);
+  transform: scale(1.4);
+  box-shadow: 0 0 12px var(--bv-lime);
+}
+
+/* ── Full-page sections ── */
+.scene {
+  height: 100vh;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 0 24px;
+}
+
+/* ══════ Scene 1: Logo reveal ══════ */
+.scene-1 {
+  background: radial-gradient(ellipse at 50% 50%, rgba(16, 30, 44, 0.5) 0%, var(--bv-bg) 70%);
+}
+
+/* Canvas for heartbeat wave across full width */
+.heartbeat-canvas {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 200px;
+  transform: translateY(-50%);
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.s1-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.s1-logo {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  opacity: 0;
+}
+
+.s1-logo.active {
+  animation: cinemaReveal 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.s1-jp {
+  font-family: 'M PLUS 1p', sans-serif;
+  font-weight: 900;
+  font-size: clamp(48px, 11vw, 88px);
+}
+
+.s1-en {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: clamp(48px, 11vw, 88px);
+}
+
+.s1-wave-wrap {
+  margin-top: 4px;
+  opacity: 0;
+}
+
+.s1-wave-wrap.active {
+  animation: fadeIn 1s ease 1.5s forwards;
+}
+
+.s1-tagline {
+  font-weight: 300;
+  font-size: 14px;
+  color: var(--bv-text-dim);
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  margin-top: 48px;
+  opacity: 0;
+}
+
+.s1-tagline.active {
+  animation: fadeInUp 1.2s ease 2s forwards;
+}
+
+/* ══════ Scene 2: "8" counter ══════ */
+.scene-2 {
+  background: var(--bv-bg);
+}
+
+.s2-num {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(120px, 30vw, 280px);
+  line-height: 1;
+  background: linear-gradient(135deg, var(--bv-lime), var(--bv-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: 0;
+  transform: scale(0.5) rotate(-10deg);
+  transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.s2-num.active {
+  opacity: 1;
+  transform: scale(1) rotate(0);
+}
+
+.s2-label {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--bv-text-muted);
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.8s ease 0.5s;
+}
+
+.s2-label.active { opacity: 1; }
+
+.s2-sub {
+  font-weight: 300;
+  font-size: 14px;
+  color: var(--bv-text-dim);
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.8s ease 0.8s;
+}
+
+.s2-sub.active { opacity: 1; }
+
+/* ══════ Scene 3: KV ══════ */
+.scene-3 {
+  background: var(--bv-bg);
+}
+
+.kv-cinema {
+  width: 90%;
+  max-width: 900px;
+  aspect-ratio: 21 / 9;
+  background: var(--bv-surface);
+  border: 1px solid var(--bv-border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bv-text-dim);
+  font-size: 14px;
+  position: relative;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: opacity 0.6s ease, transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kv-cinema.active {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+/* Letterbox bars */
+.kv-cinema::before, .kv-cinema::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--bv-lime), var(--bv-pink));
+  opacity: 0.5;
+}
+
+.kv-cinema::before { top: 0; }
+.kv-cinema::after { bottom: 0; }
+
+.kv-label {
+  position: absolute;
+  bottom: -32px;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--bv-text-dim);
+}
+
+/* ══════ Scene 4: Sites cascade ══════ */
+.scene-4 {
+  height: auto;
+  min-height: 100vh;
+  scroll-snap-align: start;
+  padding: 80px 24px 100px;
+}
+
+.s4-heading {
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--bv-text-dim);
+  text-align: center;
+  margin-bottom: 56px;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.s4-heading.active { opacity: 1; }
+
+/* Stacked horizontal cards */
+.sites-stack {
+  max-width: 700px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.site-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 24px;
+  background: var(--bv-surface);
+  border: 1px solid var(--bv-border);
+  border-radius: 10px;
+  transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  opacity: 0;
+  transform: translateX(-40px);
+}
+
+.site-row.active {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.site-row:hover {
+  border-color: var(--bv-lime);
+  transform: translateX(8px) !important;
+  box-shadow: -4px 0 24px rgba(199, 242, 132, 0.06);
+}
+
+.site-row-index {
+  font-family: 'DM Serif Display', serif;
+  font-size: 28px;
+  color: var(--bv-text-dim);
+  min-width: 40px;
+  text-align: center;
+  transition: color 0.3s;
+}
+
+.site-row:hover .site-row-index {
+  color: var(--bv-lime);
+}
+
+.site-row-info {
+  flex: 1;
+}
+
+.site-row-name {
+  font-weight: 900;
+  font-size: 15px;
+  margin-bottom: 3px;
+}
+
+.site-row-desc {
+  font-size: 12px;
+  color: var(--bv-text-muted);
+}
+
+.site-row-type {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--bv-lime);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border: 1px solid rgba(199, 242, 132, 0.2);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.site-row-arrow {
+  font-size: 18px;
+  color: var(--bv-text-dim);
+  transition: color 0.3s, transform 0.3s;
+}
+
+.site-row:hover .site-row-arrow {
+  color: var(--bv-lime);
+  transform: translateX(4px);
+}
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 48px 24px;
+  font-size: 11px;
+  color: var(--bv-text-dim);
+  border-top: 1px solid var(--bv-border);
+  scroll-snap-align: end;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 12px;
+}
+
+.footer-jp {
+  font-family: 'M PLUS 1p', sans-serif;
+  font-weight: 900;
+  font-size: 18px;
+  color: var(--bv-text-dim);
+}
+
+.footer-en {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 18px;
+  color: var(--bv-text-dim);
+}
+
+/* ── Keyframes ── */
+@keyframes cinemaReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(40px);
+    filter: blur(12px);
+    letter-spacing: 20px;
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+    letter-spacing: normal;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes waveDash {
+  from { stroke-dashoffset: 400; }
+  to { stroke-dashoffset: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="concept-badge">
+  <strong>Mock F</strong> &mdash; Cinematic &mdash; フルスクリーン・シネマティック体験
+</div>
+
+<!-- Progress bar -->
+<div class="progress-track">
+  <div class="progress-bar" id="progress-bar"></div>
+</div>
+
+<!-- Side navigation -->
+<nav class="side-nav" id="side-nav">
+  <button class="side-dot active" data-scene="0"></button>
+  <button class="side-dot" data-scene="1"></button>
+  <button class="side-dot" data-scene="2"></button>
+  <button class="side-dot" data-scene="3"></button>
+</nav>
+
+<!-- ══════ Scene 1: Logo ══════ -->
+<section class="scene scene-1" data-scene-idx="0">
+  <canvas class="heartbeat-canvas" id="heartbeat"></canvas>
+  <div class="s1-content">
+    <div class="s1-logo" data-anim>
+      <span class="s1-jp">美少女</span><span class="s1-en">Vibes</span>
+    </div>
+    <div class="s1-wave-wrap" data-anim>
+      <svg id="logo-wave" xmlns="http://www.w3.org/2000/svg" height="30" overflow="visible">
+        <defs>
+          <linearGradient id="wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#c7f284"/>
+            <stop offset="100%" stop-color="#ff69b4"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <p class="s1-tagline" data-anim>Your vibe starts here.</p>
+  </div>
+</section>
+
+<!-- ══════ Scene 2: Counter ══════ -->
+<section class="scene scene-2" data-scene-idx="1">
+  <div class="s2-num" data-anim>8</div>
+  <div class="s2-label" data-anim>Sites</div>
+  <div class="s2-sub" data-anim>One network. One pulse.</div>
+</section>
+
+<!-- ══════ Scene 3: KV ══════ -->
+<section class="scene scene-3" data-scene-idx="2">
+  <div class="kv-cinema" data-anim>
+    Key Visual — Step 3 で差し替え
+    <span class="kv-label">Key Visual</span>
+  </div>
+</section>
+
+<!-- ══════ Scene 4: Sites ══════ -->
+<section class="scene-4" data-scene-idx="3">
+  <h2 class="s4-heading" data-anim>The Network</h2>
+  <div class="sites-stack" id="sites-stack"></div>
+</section>
+
+<footer>
+  <div class="footer-logo">
+    <span class="footer-jp">美少女</span><span class="footer-en">Vibes</span>
+  </div>
+  <p>&copy; 2026 Bishojo Vibes</p>
+</footer>
+
+<script>
+// ── Heartbeat canvas ──
+(function() {
+  const canvas = document.getElementById('heartbeat');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w, h;
+
+  function resize() {
+    w = canvas.width = canvas.offsetWidth;
+    h = canvas.height = canvas.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  let time = 0;
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    time += 0.02;
+
+    const cy = h / 2;
+    const grad = ctx.createLinearGradient(0, 0, w, 0);
+    grad.addColorStop(0, '#c7f284');
+    grad.addColorStop(1, '#ff69b4');
+
+    ctx.beginPath();
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    for (let x = 0; x < w; x++) {
+      const nx = x / w;
+      // Heartbeat pulse pattern
+      const phase = (nx * 6 + time) % 6;
+      let yOff = 0;
+      if (phase > 2.0 && phase < 2.3) {
+        yOff = Math.sin((phase - 2.0) / 0.3 * Math.PI) * -50;
+      } else if (phase > 2.3 && phase < 2.6) {
+        yOff = Math.sin((phase - 2.3) / 0.3 * Math.PI) * 30;
+      } else if (phase > 2.6 && phase < 2.8) {
+        yOff = Math.sin((phase - 2.6) / 0.2 * Math.PI) * -15;
+      }
+
+      if (x === 0) ctx.moveTo(x, cy + yOff);
+      else ctx.lineTo(x, cy + yOff);
+    }
+    ctx.stroke();
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── Logo wave ──
+function initLogoWave() {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const PHI = 1 / (1 + 1.618);
+  const logoMain = document.querySelector('.s1-logo');
+  const svgEl = document.getElementById('logo-wave');
+  if (!logoMain || !svgEl) return;
+
+  const w = logoMain.getBoundingClientRect().width;
+  svgEl.setAttribute('width', String(w));
+  svgEl.setAttribute('viewBox', `0 0 ${w} 30`);
+
+  const y = 15, c = w * PHI;
+  const pts = [
+    [0, y], [c-24, y], [c-16, y],
+    [c-8, 5], [c, 25], [c+8, 10],
+    [c+16, y], [w, y],
+  ];
+
+  const poly = document.createElementNS(svgNS, 'polyline');
+  poly.setAttribute('points', pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' '));
+  poly.setAttribute('stroke', 'url(#wave-grad)');
+  poly.setAttribute('stroke-width', '7');
+  poly.setAttribute('fill', 'none');
+  poly.setAttribute('stroke-linecap', 'round');
+  poly.setAttribute('stroke-linejoin', 'round');
+
+  const len = w + 60;
+  poly.setAttribute('stroke-dasharray', String(len));
+  poly.setAttribute('stroke-dashoffset', String(len));
+  poly.style.animation = 'waveDash 2s cubic-bezier(0.16, 1, 0.3, 1) 1.5s forwards';
+  svgEl.appendChild(poly);
+}
+
+// ── Scroll progress ──
+function initProgress() {
+  const bar = document.getElementById('progress-bar');
+  window.addEventListener('scroll', () => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+    bar.style.width = pct + '%';
+  });
+}
+
+// ── Side nav ──
+function initSideNav() {
+  const dots = document.querySelectorAll('.side-dot');
+  const scenes = document.querySelectorAll('[data-scene-idx]');
+
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      const idx = parseInt(dot.dataset.scene);
+      scenes[idx]?.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = e.target.dataset.sceneIdx;
+        dots.forEach(d => d.classList.remove('active'));
+        dots[idx]?.classList.add('active');
+      }
+    });
+  }, { threshold: 0.5 });
+
+  scenes.forEach(s => observer.observe(s));
+}
+
+// ── Scene animations ──
+function initSceneAnims() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+
+  document.querySelectorAll('[data-anim]').forEach(el => observer.observe(el));
+}
+
+// ── Sites ──
+function renderSites() {
+  const sites = [
+    { name: 'Gero Heaven', desc: '無料ゲロイラマ天国', url: 'https://gero-heaven.com/', type: 'Video' },
+    { name: 'Gokkun Heaven', desc: '無料ごっくん動画天国', url: 'https://gokkun-heaven.com/', type: 'Video' },
+    { name: 'Futanari Heaven', desc: '無料ふたなり同人天国', url: 'https://futanari-heaven.com/', type: 'Doujin' },
+    { name: 'Tentacle Heaven', desc: '無料触手同人天国', url: 'https://tentacle-heaven.com/', type: 'Doujin' },
+    { name: 'Parody Heaven', desc: '無料パロディ同人天国', url: 'https://parody-heaven.com/', type: 'Doujin' },
+    { name: 'NTR Heaven', desc: '無料NTR同人天国', url: 'https://ntr-heaven.com/', type: 'Doujin' },
+    { name: 'Ishukan Heaven', desc: '無料異種姦同人天国', url: 'https://ishukan-heaven.com/', type: 'Doujin' },
+    { name: 'Saimin Heaven', desc: '無料催眠同人天国', url: 'https://saimin-heaven.com/', type: 'Doujin' },
+  ];
+
+  const stack = document.getElementById('sites-stack');
+  sites.forEach((s, i) => {
+    const row = document.createElement('a');
+    row.className = 'site-row';
+    row.href = s.url;
+    row.rel = 'noopener';
+    row.setAttribute('data-anim', '');
+    row.style.transitionDuration = '0.8s';
+    row.style.transitionDelay = `${i * 0.1}s`;
+    row.style.transitionTimingFunction = 'cubic-bezier(0.16, 1, 0.3, 1)';
+    row.innerHTML = `
+      <div class="site-row-index">${i + 1}</div>
+      <div class="site-row-info">
+        <div class="site-row-name">${s.name}</div>
+        <div class="site-row-desc">${s.desc}</div>
+      </div>
+      <span class="site-row-type">${s.type}</span>
+      <span class="site-row-arrow">&rarr;</span>
+    `;
+    stack.appendChild(row);
+  });
+}
+
+document.fonts.ready.then(() => {
+  initLogoWave();
+  renderSites();
+  initProgress();
+  initSideNav();
+  setTimeout(initSceneAnims, 200);
+});
+</script>
+</body>
+</html>

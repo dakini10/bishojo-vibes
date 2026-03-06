@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock B: Pulse — スクロール展開・パララックス</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=M+PLUS+1p:wght@900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bv-lime: #c7f284;
+  --bv-pink: #ff69b4;
+  --bv-bg: #0a1520;
+  --bv-surface: #101e2c;
+  --bv-border: #1a2e42;
+  --bv-text: #e8e6e3;
+  --bv-text-muted: #8a9bb0;
+  --bv-text-dim: #5a6b7d;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bv-bg);
+  color: var(--bv-text);
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Concept Badge ── */
+.concept-badge {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  background: var(--bv-surface);
+  border: 1px solid var(--bv-border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--bv-text-muted);
+  z-index: 100;
+}
+.concept-badge strong { color: var(--bv-lime); }
+
+/* ── Section 1: Hero (100vh) ── */
+.hero {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Particle canvas */
+.particles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.logo-text {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: clamp(64px, 16vw, 120px);
+  color: var(--bv-text);
+  letter-spacing: -2px;
+  opacity: 0;
+  animation: scaleIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+}
+
+.logo-wave-container {
+  opacity: 0;
+  animation: fadeIn 1s ease 1s forwards;
+}
+
+.tagline {
+  font-size: 15px;
+  color: var(--bv-text-dim);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 40px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 1.6s forwards;
+}
+
+/* Scroll indicator */
+.scroll-hint {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  animation: fadeIn 1s ease 2.5s forwards;
+}
+
+.scroll-hint span {
+  font-size: 10px;
+  color: var(--bv-text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.scroll-arrow {
+  width: 20px;
+  height: 20px;
+  border-right: 2px solid var(--bv-text-dim);
+  border-bottom: 2px solid var(--bv-text-dim);
+  transform: rotate(45deg);
+  animation: bounce 2s ease-in-out infinite;
+}
+
+/* ── Divider: Full-width wave ── */
+.wave-divider {
+  position: relative;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.wave-divider svg {
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* ── Section 2: Tagline reveal (parallax) ── */
+.reveal-section {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+}
+
+.reveal-text {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: clamp(24px, 5vw, 48px);
+  text-align: center;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.reveal-text.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-text .accent {
+  background: linear-gradient(135deg, var(--bv-lime), var(--bv-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.reveal-sub {
+  font-size: 14px;
+  color: var(--bv-text-dim);
+  margin-top: 24px;
+  letter-spacing: 1px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease 0.3s, transform 0.8s ease 0.3s;
+}
+
+.reveal-sub.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Section 3: Key visual placeholder ── */
+.kv-section {
+  padding: 40px 24px 80px;
+  display: flex;
+  justify-content: center;
+}
+
+.kv-placeholder {
+  width: 100%;
+  max-width: 720px;
+  aspect-ratio: 16 / 9;
+  background: var(--bv-surface);
+  border: 1px dashed var(--bv-border);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bv-text-dim);
+  font-size: 14px;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.kv-placeholder.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Section 4: Sites grid ── */
+.sites-section {
+  padding: 40px 24px 80px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.sites-heading {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--bv-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-align: center;
+  margin-bottom: 40px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.sites-heading.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.site-card {
+  background: var(--bv-surface);
+  border: 1px solid var(--bv-border);
+  border-radius: 12px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.site-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.site-card:hover {
+  border-color: var(--bv-lime);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(199, 242, 132, 0.08);
+}
+
+/* Glow line on hover */
+.site-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--bv-lime), var(--bv-pink));
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.site-card:hover::before {
+  opacity: 1;
+}
+
+.site-name {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 17px;
+  margin-bottom: 6px;
+}
+
+.site-desc {
+  font-size: 13px;
+  color: var(--bv-text-muted);
+  margin-bottom: 12px;
+}
+
+.site-type {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--bv-lime);
+  border: 1px solid rgba(199, 242, 132, 0.2);
+  border-radius: 4px;
+  padding: 2px 8px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 40px 24px;
+  font-size: 12px;
+  color: var(--bv-text-dim);
+  border-top: 1px solid var(--bv-border);
+}
+
+/* ── Animations ── */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: rotate(45deg) translateY(0); }
+  50% { transform: rotate(45deg) translateY(6px); }
+}
+
+@keyframes waveDash {
+  from { stroke-dashoffset: 300; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes particleFade {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+</style>
+</head>
+<body>
+
+<div class="concept-badge">
+  <strong>Mock B</strong> &mdash; Pulse &mdash; スクロール展開 + パララックス
+</div>
+
+<!-- ── Section 1: Hero ── -->
+<section class="hero">
+  <canvas class="particles" id="particles"></canvas>
+  <div class="hero-content">
+    <div class="logo-text" id="bivi-text">BiVi</div>
+    <div class="logo-wave-container">
+      <svg id="bivi-wave" xmlns="http://www.w3.org/2000/svg" height="30" overflow="visible">
+        <defs>
+          <linearGradient id="wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#c7f284"/>
+            <stop offset="100%" stop-color="#ff69b4"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <p class="tagline">Your vibe starts here.</p>
+  </div>
+  <div class="scroll-hint">
+    <span>Scroll</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<!-- ── Divider ── -->
+<div class="wave-divider">
+  <svg viewBox="0 0 1200 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <polyline points="0,30 200,30 350,30 400,10 450,50 500,20 550,30 1200,30"
+      stroke="url(#wave-grad-div)" stroke-width="3" fill="none"
+      stroke-linecap="round" stroke-linejoin="round"
+      opacity="0.3" />
+    <defs>
+      <linearGradient id="wave-grad-div" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#c7f284"/>
+        <stop offset="100%" stop-color="#ff69b4"/>
+      </linearGradient>
+    </defs>
+  </svg>
+</div>
+
+<!-- ── Section 2: Reveal ── -->
+<section class="reveal-section">
+  <div class="reveal-text" data-reveal>
+    8 sites.<br><span class="accent">One vibe.</span>
+  </div>
+  <p class="reveal-sub" data-reveal>
+    Explore the network.
+  </p>
+</section>
+
+<!-- ── Section 3: Key Visual ── -->
+<section class="kv-section">
+  <div class="kv-placeholder" data-reveal>
+    Key Visual Placeholder — Step 3 で差し替え
+  </div>
+</section>
+
+<!-- ── Section 4: Sites ── -->
+<section class="sites-section">
+  <h2 class="sites-heading" data-reveal>The Network</h2>
+  <div class="sites-grid" id="sites-grid"></div>
+</section>
+
+<footer>
+  <p>&copy; 2026 Bishojo Vibes</p>
+</footer>
+
+<script>
+// ── Wave init ──
+function initWave() {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const PHI = 1 / (1 + 1.618);
+  const textEl = document.getElementById('bivi-text');
+  const svgEl = document.getElementById('bivi-wave');
+  if (!textEl || !svgEl) return;
+
+  const w = textEl.getBoundingClientRect().width;
+  svgEl.setAttribute('width', String(w));
+  svgEl.setAttribute('viewBox', `0 0 ${w} 30`);
+
+  const y = 15, c = w * PHI;
+  const pts = [
+    [0, y], [c-24, y], [c-16, y],
+    [c-8, 5], [c, 25], [c+8, 10],
+    [c+16, y], [w, y],
+  ];
+
+  const poly = document.createElementNS(svgNS, 'polyline');
+  poly.setAttribute('points', pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' '));
+  poly.setAttribute('stroke', 'url(#wave-grad)');
+  poly.setAttribute('stroke-width', '7');
+  poly.setAttribute('fill', 'none');
+  poly.setAttribute('stroke-linecap', 'round');
+  poly.setAttribute('stroke-linejoin', 'round');
+
+  const len = w + 60;
+  poly.setAttribute('stroke-dasharray', String(len));
+  poly.setAttribute('stroke-dashoffset', String(len));
+  poly.style.animation = `waveDash 1.5s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards`;
+  svgEl.appendChild(poly);
+}
+
+// ── Particles ──
+function initParticles() {
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let w, h;
+  const dots = [];
+  const COUNT = 50;
+
+  function resize() {
+    w = canvas.width = canvas.offsetWidth;
+    h = canvas.height = canvas.offsetHeight;
+  }
+
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < COUNT; i++) {
+    dots.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.5 + 0.5,
+      o: Math.random() * 0.4 + 0.1,
+      color: Math.random() > 0.5 ? '#c7f284' : '#ff69b4',
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    for (const d of dots) {
+      d.x += d.vx;
+      d.y += d.vy;
+      if (d.x < 0) d.x = w;
+      if (d.x > w) d.x = 0;
+      if (d.y < 0) d.y = h;
+      if (d.y > h) d.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fillStyle = d.color;
+      ctx.globalAlpha = d.o;
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── Scroll reveal ──
+function initReveal() {
+  const els = document.querySelectorAll('[data-reveal]');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.2 });
+
+  els.forEach(el => observer.observe(el));
+}
+
+// ── Sites grid ──
+function renderSites() {
+  const sites = [
+    { name: 'Gero Heaven', desc: '無料ゲロイラマ天国', url: 'https://gero-heaven.com/', type: 'Video' },
+    { name: 'Gokkun Heaven', desc: '無料ごっくん動画天国', url: 'https://gokkun-heaven.com/', type: 'Video' },
+    { name: 'Futanari Heaven', desc: '無料ふたなり同人天国', url: 'https://futanari-heaven.com/', type: 'Doujin' },
+    { name: 'Tentacle Heaven', desc: '無料触手同人天国', url: 'https://tentacle-heaven.com/', type: 'Doujin' },
+    { name: 'Parody Heaven', desc: '無料パロディ同人天国', url: 'https://parody-heaven.com/', type: 'Doujin' },
+    { name: 'NTR Heaven', desc: '無料NTR同人天国', url: 'https://ntr-heaven.com/', type: 'Doujin' },
+    { name: 'Ishukan Heaven', desc: '無料異種姦同人天国', url: 'https://ishukan-heaven.com/', type: 'Doujin' },
+    { name: 'Saimin Heaven', desc: '無料催眠同人天国', url: 'https://saimin-heaven.com/', type: 'Doujin' },
+  ];
+
+  const grid = document.getElementById('sites-grid');
+  sites.forEach((s, i) => {
+    const card = document.createElement('a');
+    card.className = 'site-card';
+    card.href = s.url;
+    card.rel = 'noopener';
+    card.setAttribute('data-reveal', '');
+    card.style.transitionDelay = `${i * 0.08}s`;
+    card.innerHTML = `
+      <div class="site-name">${s.name}</div>
+      <div class="site-desc">${s.desc}</div>
+      <span class="site-type">${s.type}</span>
+    `;
+    grid.appendChild(card);
+  });
+
+  // Re-observe new cards
+  setTimeout(initReveal, 50);
+}
+
+// ── Init ──
+document.fonts.ready.then(() => {
+  initWave();
+  initParticles();
+  renderSites();
+  initReveal();
+});
+</script>
+</body>
+</html>

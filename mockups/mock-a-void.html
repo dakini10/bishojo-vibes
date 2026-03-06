@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock A: Void — 1画面完結・超ミニマル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=M+PLUS+1p:wght@900&display=swap" rel="stylesheet">
+<style>
+/* ── Tokens ── */
+:root {
+  --bv-lime: #c7f284;
+  --bv-pink: #ff69b4;
+  --bv-bg: #0a1520;
+  --bv-surface: #101e2c;
+  --bv-border: #1a2e42;
+  --bv-text: #e8e6e3;
+  --bv-text-muted: #8a9bb0;
+  --bv-text-dim: #5a6b7d;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bv-bg);
+  color: var(--bv-text);
+  font-family: system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Concept Badge ── */
+.concept-badge {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  background: var(--bv-surface);
+  border: 1px solid var(--bv-border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--bv-text-muted);
+  z-index: 100;
+}
+.concept-badge strong { color: var(--bv-lime); }
+
+/* ── Main Layout ── */
+.scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 800px;
+  padding: 0 24px;
+  position: relative;
+}
+
+/* ── Logo ── */
+.logo-container {
+  opacity: 0;
+  animation: fadeInUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+}
+
+.logo-text {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: clamp(56px, 14vw, 96px);
+  color: var(--bv-text);
+  letter-spacing: -1px;
+  text-align: center;
+}
+
+.logo-wave {
+  display: block;
+  margin: 0 auto;
+}
+
+/* ── Tagline ── */
+.tagline {
+  font-size: 14px;
+  color: var(--bv-text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 32px;
+  opacity: 0;
+  animation: fadeIn 1s ease 1.5s forwards;
+}
+
+/* ── Sites — minimal inline list ── */
+.sites-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+  margin-top: 56px;
+  opacity: 0;
+  animation: fadeIn 1s ease 2s forwards;
+}
+
+.sites-line a {
+  font-size: 12px;
+  color: var(--bv-text-dim);
+  text-decoration: none;
+  transition: color 0.3s;
+  letter-spacing: 0.5px;
+}
+
+.sites-line a:hover {
+  color: var(--bv-lime);
+}
+
+.sites-line .sep {
+  color: var(--bv-border);
+  user-select: none;
+}
+
+/* ── Footer ── */
+.footer {
+  position: fixed;
+  bottom: 16px;
+  font-size: 11px;
+  color: var(--bv-text-dim);
+  opacity: 0;
+  animation: fadeIn 1s ease 2.5s forwards;
+}
+
+/* ── Ambient glow ── */
+.ambient {
+  position: fixed;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+.ambient-lime {
+  background: var(--bv-lime);
+  top: 20%;
+  left: 30%;
+  animation: drift 12s ease-in-out infinite alternate;
+}
+
+.ambient-pink {
+  background: var(--bv-pink);
+  bottom: 20%;
+  right: 30%;
+  animation: drift 15s ease-in-out infinite alternate-reverse;
+}
+
+/* ── Animations ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes drift {
+  from { transform: translate(0, 0); }
+  to { transform: translate(40px, -30px); }
+}
+
+/* Wave dash animation */
+@keyframes waveDash {
+  from { stroke-dashoffset: 200; }
+  to { stroke-dashoffset: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="concept-badge">
+  <strong>Mock A</strong> &mdash; Void &mdash; 1画面完結・超ミニマル
+</div>
+
+<!-- Ambient background glows -->
+<div class="ambient ambient-lime"></div>
+<div class="ambient ambient-pink"></div>
+
+<div class="scene">
+  <!-- Logo -->
+  <div class="logo-container">
+    <div class="logo-text" id="bivi-text">BiVi</div>
+    <svg class="logo-wave" id="bivi-wave" xmlns="http://www.w3.org/2000/svg" height="30" overflow="visible">
+      <defs>
+        <linearGradient id="wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#c7f284"/>
+          <stop offset="100%" stop-color="#ff69b4"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+
+  <!-- Tagline -->
+  <p class="tagline">Your vibe starts here.</p>
+
+  <!-- Sites as inline text list -->
+  <nav class="sites-line">
+    <a href="https://gero-heaven.com/">Gero</a>
+    <span class="sep">/</span>
+    <a href="https://gokkun-heaven.com/">Gokkun</a>
+    <span class="sep">/</span>
+    <a href="https://futanari-heaven.com/">Futanari</a>
+    <span class="sep">/</span>
+    <a href="https://tentacle-heaven.com/">Tentacle</a>
+    <span class="sep">/</span>
+    <a href="https://parody-heaven.com/">Parody</a>
+    <span class="sep">/</span>
+    <a href="https://ntr-heaven.com/">NTR</a>
+    <span class="sep">/</span>
+    <a href="https://ishukan-heaven.com/">Ishukan</a>
+    <span class="sep">/</span>
+    <a href="https://saimin-heaven.com/">Saimin</a>
+  </nav>
+</div>
+
+<div class="footer">&copy; 2026 Bishojo Vibes</div>
+
+<script>
+function initWave() {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const PHI = 1 / (1 + 1.618);
+  const textEl = document.getElementById('bivi-text');
+  const svgEl = document.getElementById('bivi-wave');
+  if (!textEl || !svgEl) return;
+
+  const w = textEl.getBoundingClientRect().width;
+  svgEl.setAttribute('width', String(w));
+  svgEl.setAttribute('viewBox', `0 0 ${w} 30`);
+
+  const y = 15;
+  const c = w * PHI;
+  const pts = [
+    [0, y], [c - 24, y], [c - 16, y],
+    [c - 8, 5], [c, 25], [c + 8, 10],
+    [c + 16, y], [w, y],
+  ];
+
+  const poly = document.createElementNS(svgNS, 'polyline');
+  const pointStr = pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  poly.setAttribute('points', pointStr);
+  poly.setAttribute('stroke', 'url(#wave-grad)');
+  poly.setAttribute('stroke-width', '7');
+  poly.setAttribute('fill', 'none');
+  poly.setAttribute('stroke-linecap', 'round');
+  poly.setAttribute('stroke-linejoin', 'round');
+
+  // Dash animation
+  const totalLen = w + 60;
+  poly.setAttribute('stroke-dasharray', String(totalLen));
+  poly.setAttribute('stroke-dashoffset', String(totalLen));
+  poly.style.animation = `waveDash 1.5s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards`;
+
+  svgEl.appendChild(poly);
+}
+
+document.fonts.ready.then(initWave);
+</script>
+</body>
+</html>

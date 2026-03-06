@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock D: Waveform — Three.js 3D波形空間</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=M+PLUS+1p:wght@900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bv-lime: #c7f284;
+  --bv-pink: #ff69b4;
+  --bv-bg: #0a1520;
+  --bv-surface: #101e2c;
+  --bv-surface-alpha: rgba(16, 30, 44, 0.85);
+  --bv-border: #1a2e42;
+  --bv-text: #e8e6e3;
+  --bv-text-muted: #8a9bb0;
+  --bv-text-dim: #5a6b7d;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bv-bg);
+  color: var(--bv-text);
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Concept Badge ── */
+.concept-badge {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  background: var(--bv-surface-alpha);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--bv-border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--bv-text-muted);
+  z-index: 200;
+}
+.concept-badge strong { color: var(--bv-lime); }
+
+/* ── Three.js Canvas ── */
+#three-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+/* ── Content overlay ── */
+.content {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Hero ── */
+.hero {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 24px;
+}
+
+/* Logo: 混植対応 */
+.logo-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0;
+  opacity: 0;
+  animation: heroReveal 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+}
+
+.logo-jp {
+  font-family: 'M PLUS 1p', sans-serif;
+  font-weight: 900;
+  font-size: clamp(40px, 9vw, 72px);
+  color: var(--bv-text);
+}
+
+.logo-en {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: clamp(40px, 9vw, 72px);
+  color: var(--bv-text);
+}
+
+/* Wave SVG under logo */
+.logo-wave-wrap {
+  opacity: 0;
+  animation: fadeIn 1s ease 1.8s forwards;
+  margin-top: 4px;
+}
+
+.tagline {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--bv-text-dim);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-top: 40px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 2.2s forwards;
+}
+
+/* Scroll cue */
+.scroll-cue {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  animation: fadeIn 1s ease 3s forwards;
+}
+
+.scroll-cue span {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--bv-text-dim);
+}
+
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--bv-lime), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+
+/* ── Midway statement ── */
+.statement {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.stmt-line {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: clamp(28px, 6vw, 56px);
+  line-height: 1.3;
+  opacity: 0;
+  transform: translateY(50px);
+  transition: opacity 1s ease, transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stmt-line.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.stmt-line .grad {
+  background: linear-gradient(135deg, var(--bv-lime), var(--bv-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stmt-sub {
+  font-size: 14px;
+  color: var(--bv-text-dim);
+  margin-top: 24px;
+  letter-spacing: 1px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s;
+}
+
+.stmt-sub.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── KV Placeholder ── */
+.kv-section {
+  padding: 0 24px 80px;
+  display: flex;
+  justify-content: center;
+}
+
+.kv-frame {
+  width: 100%;
+  max-width: 800px;
+  aspect-ratio: 16 / 9;
+  border-radius: 20px;
+  background: var(--bv-surface-alpha);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--bv-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bv-text-dim);
+  font-size: 14px;
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.kv-frame.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Gradient border glow */
+.kv-frame::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(199,242,132,0.3), transparent, rgba(255,105,180,0.3));
+  z-index: -1;
+}
+
+/* ── Sites ── */
+.sites-section {
+  padding: 40px 24px 100px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.sites-label {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--bv-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  text-align: center;
+  margin-bottom: 48px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.sites-label.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.site-card {
+  position: relative;
+  background: var(--bv-surface-alpha);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--bv-border);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.site-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.site-card:hover {
+  transform: translateY(-6px) !important;
+  border-color: var(--bv-lime);
+}
+
+/* Glow top line */
+.site-card::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--bv-lime), var(--bv-pink), transparent);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.3s, left 0.3s, right 0.3s;
+}
+
+.site-card:hover::before {
+  opacity: 1;
+  left: 10%;
+  right: 10%;
+}
+
+.site-name {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.site-desc {
+  font-size: 12px;
+  color: var(--bv-text-muted);
+}
+
+.site-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--bv-lime);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.site-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bv-lime);
+  box-shadow: 0 0 8px var(--bv-lime);
+}
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 40px 24px;
+  font-size: 11px;
+  color: var(--bv-text-dim);
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Animations ── */
+@keyframes heroReveal {
+  0% { opacity: 0; transform: translateY(30px) scale(0.97); filter: blur(8px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+
+@keyframes waveDash {
+  from { stroke-dashoffset: 400; }
+  to { stroke-dashoffset: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="concept-badge">
+  <strong>Mock D</strong> &mdash; Waveform &mdash; Three.js 3D波形空間
+</div>
+
+<!-- Three.js canvas -->
+<canvas id="three-canvas"></canvas>
+
+<div class="content">
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="logo-main">
+      <span class="logo-jp">美少女</span><span class="logo-en">Vibes</span>
+    </div>
+    <div class="logo-wave-wrap">
+      <svg id="logo-wave" xmlns="http://www.w3.org/2000/svg" height="30" overflow="visible">
+        <defs>
+          <linearGradient id="wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#c7f284"/>
+            <stop offset="100%" stop-color="#ff69b4"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <p class="tagline">Your vibe starts here.</p>
+
+    <div class="scroll-cue">
+      <span>Explore</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- ── Statement ── -->
+  <section class="statement">
+    <div class="stmt-line" data-reveal>8 sites.</div>
+    <div class="stmt-line" data-reveal style="transition-delay:0.15s"><span class="grad">One vibe.</span></div>
+    <p class="stmt-sub" data-reveal>A network pulsing in sync.</p>
+  </section>
+
+  <!-- ── KV ── -->
+  <section class="kv-section">
+    <div class="kv-frame" data-reveal>
+      Key Visual — Step 3 で差し替え
+    </div>
+  </section>
+
+  <!-- ── Sites ── -->
+  <section class="sites-section">
+    <h2 class="sites-label" data-reveal>The Network</h2>
+    <div class="sites-grid" id="sites-grid"></div>
+  </section>
+
+  <footer>&copy; 2026 Bishojo Vibes</footer>
+</div>
+
+<!-- Three.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ══════════════════════════════════════
+// Three.js — 3D Waveform Terrain
+// ══════════════════════════════════════
+(function() {
+  const canvas = document.getElementById('three-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 3, 5);
+  camera.lookAt(0, 0, 0);
+
+  // Plane geometry for wave terrain
+  const geo = new THREE.PlaneGeometry(20, 20, 128, 128);
+  geo.rotateX(-Math.PI * 0.5);
+
+  // Custom shader material
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uMouse: { value: new THREE.Vector2(0, 0) },
+      uLime: { value: new THREE.Color('#c7f284') },
+      uPink: { value: new THREE.Color('#ff69b4') },
+      uScroll: { value: 0 },
+    },
+    vertexShader: `
+      uniform float uTime;
+      uniform vec2 uMouse;
+      uniform float uScroll;
+      varying float vHeight;
+      varying vec2 vUv;
+
+      void main() {
+        vUv = uv;
+        vec3 pos = position;
+
+        // Multiple wave layers
+        float wave1 = sin(pos.x * 0.8 + uTime * 0.4) * cos(pos.z * 0.6 + uTime * 0.3) * 0.5;
+        float wave2 = sin(pos.x * 1.5 + uTime * 0.7 + 1.0) * sin(pos.z * 1.2 + uTime * 0.5) * 0.25;
+        float wave3 = cos(pos.x * 2.5 + uTime * 1.0) * sin(pos.z * 2.0 + uTime * 0.8) * 0.12;
+
+        // Mouse influence
+        float dist = length(pos.xz - uMouse * 6.0);
+        float mouseWave = exp(-dist * 0.3) * sin(dist * 2.0 - uTime * 3.0) * 0.6;
+
+        pos.y = wave1 + wave2 + wave3 + mouseWave;
+
+        // Scroll: camera pulls back effect
+        pos.y *= max(0.3, 1.0 - uScroll * 0.5);
+
+        vHeight = pos.y;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uLime;
+      uniform vec3 uPink;
+      uniform float uTime;
+      varying float vHeight;
+      varying vec2 vUv;
+
+      void main() {
+        // Gradient based on height + position
+        float t = smoothstep(-0.6, 0.8, vHeight) * 0.7 + vUv.x * 0.3;
+        vec3 color = mix(uLime, uPink, t);
+
+        // Wireframe-style: fade based on distance from grid lines
+        float lineX = abs(fract(vUv.x * 64.0) - 0.5) * 2.0;
+        float lineZ = abs(fract(vUv.y * 64.0) - 0.5) * 2.0;
+        float line = min(lineX, lineZ);
+        float wireAlpha = smoothstep(0.0, 0.08, line);
+
+        float alpha = mix(0.6, 0.04, wireAlpha);
+        alpha *= smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.7, vUv.x);
+        alpha *= smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+
+        gl_FragColor = vec4(color, alpha);
+      }
+    `,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  scene.add(mesh);
+
+  // Mouse tracking
+  const mouse = { x: 0, y: 0 };
+  window.addEventListener('mousemove', (e) => {
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  });
+
+  // Scroll tracking
+  let scrollY = 0;
+  window.addEventListener('scroll', () => {
+    scrollY = window.scrollY / window.innerHeight;
+  });
+
+  // Resize
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // Animation loop
+  function animate() {
+    requestAnimationFrame(animate);
+    mat.uniforms.uTime.value += 0.016;
+    mat.uniforms.uMouse.value.set(
+      mouse.x + (mat.uniforms.uMouse.value.x - mouse.x) * 0.95,
+      mouse.y + (mat.uniforms.uMouse.value.y - mouse.y) * 0.95,
+    );
+    mat.uniforms.uScroll.value += (scrollY - mat.uniforms.uScroll.value) * 0.05;
+
+    // Gentle camera sway
+    camera.position.x = Math.sin(mat.uniforms.uTime.value * 0.1) * 0.3;
+    camera.lookAt(0, 0, 0);
+
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+
+// ══════════════════════════════════════
+// Logo wave
+// ══════════════════════════════════════
+function initLogoWave() {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const PHI = 1 / (1 + 1.618);
+  const logoMain = document.querySelector('.logo-main');
+  const svgEl = document.getElementById('logo-wave');
+  if (!logoMain || !svgEl) return;
+
+  const w = logoMain.getBoundingClientRect().width;
+  svgEl.setAttribute('width', String(w));
+  svgEl.setAttribute('viewBox', `0 0 ${w} 30`);
+
+  const y = 15, c = w * PHI;
+  const pts = [
+    [0, y], [c-24, y], [c-16, y],
+    [c-8, 5], [c, 25], [c+8, 10],
+    [c+16, y], [w, y],
+  ];
+
+  const poly = document.createElementNS(svgNS, 'polyline');
+  poly.setAttribute('points', pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' '));
+  poly.setAttribute('stroke', 'url(#wave-grad)');
+  poly.setAttribute('stroke-width', '7');
+  poly.setAttribute('fill', 'none');
+  poly.setAttribute('stroke-linecap', 'round');
+  poly.setAttribute('stroke-linejoin', 'round');
+
+  const len = w + 60;
+  poly.setAttribute('stroke-dasharray', String(len));
+  poly.setAttribute('stroke-dashoffset', String(len));
+  poly.style.animation = 'waveDash 2s cubic-bezier(0.16, 1, 0.3, 1) 1.5s forwards';
+  svgEl.appendChild(poly);
+}
+
+// ══════════════════════════════════════
+// Scroll reveal
+// ══════════════════════════════════════
+function initReveal() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add('visible');
+    });
+  }, { threshold: 0.15 });
+
+  document.querySelectorAll('[data-reveal]').forEach(el => observer.observe(el));
+}
+
+// ══════════════════════════════════════
+// Sites
+// ══════════════════════════════════════
+function renderSites() {
+  const sites = [
+    { name: 'Gero Heaven', desc: '無料ゲロイラマ天国', url: 'https://gero-heaven.com/', type: 'Video' },
+    { name: 'Gokkun Heaven', desc: '無料ごっくん動画天国', url: 'https://gokkun-heaven.com/', type: 'Video' },
+    { name: 'Futanari Heaven', desc: '無料ふたなり同人天国', url: 'https://futanari-heaven.com/', type: 'Doujin' },
+    { name: 'Tentacle Heaven', desc: '無料触手同人天国', url: 'https://tentacle-heaven.com/', type: 'Doujin' },
+    { name: 'Parody Heaven', desc: '無料パロディ同人天国', url: 'https://parody-heaven.com/', type: 'Doujin' },
+    { name: 'NTR Heaven', desc: '無料NTR同人天国', url: 'https://ntr-heaven.com/', type: 'Doujin' },
+    { name: 'Ishukan Heaven', desc: '無料異種姦同人天国', url: 'https://ishukan-heaven.com/', type: 'Doujin' },
+    { name: 'Saimin Heaven', desc: '無料催眠同人天国', url: 'https://saimin-heaven.com/', type: 'Doujin' },
+  ];
+
+  const grid = document.getElementById('sites-grid');
+  sites.forEach((s, i) => {
+    const card = document.createElement('a');
+    card.className = 'site-card';
+    card.href = s.url;
+    card.rel = 'noopener';
+    card.setAttribute('data-reveal', '');
+    card.style.transitionDelay = `${i * 0.07}s`;
+    card.innerHTML = `
+      <div class="site-name">${s.name}</div>
+      <div class="site-desc">${s.desc}</div>
+      <span class="site-badge">${s.type}</span>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+document.fonts.ready.then(() => {
+  initLogoWave();
+  renderSites();
+  setTimeout(initReveal, 100);
+});
+</script>
+</body>
+</html>

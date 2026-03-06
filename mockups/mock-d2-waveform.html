@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock D v3: Waveform — Three.js 3D波形空間</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700;900&family=M+PLUS+1p:wght@900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bv-lime: #c7f284;
+  --bv-pink: #ff69b4;
+  --bv-bg: #0a1520;
+  --bv-surface: #101e2c;
+  --bv-surface-alpha: rgba(16, 30, 44, 0.85);
+  --bv-border: #1a2e42;
+  --bv-text: #e8e6e3;
+  --bv-text-muted: #8a9bb0;
+  --bv-text-dim: #5a6b7d;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bv-bg);
+  color: var(--bv-text);
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Concept Badge ── */
+.concept-badge {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  background: var(--bv-surface-alpha);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--bv-border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--bv-text-muted);
+  z-index: 200;
+}
+.concept-badge strong { color: var(--bv-lime); }
+
+/* ── Three.js Canvas ── */
+#three-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+/* ── Content overlay ── */
+.content {
+  position: relative;
+  z-index: 1;
+}
+
+/* ══════════════════════════════════════
+   Hero
+   ══════════════════════════════════════ */
+.hero {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 24px;
+}
+
+/* Logo: 混植対応 */
+.logo-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0;
+  opacity: 0;
+  animation: heroReveal 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+}
+
+.logo-jp {
+  font-family: 'M PLUS 1p', sans-serif;
+  font-weight: 900;
+  font-size: clamp(40px, 9vw, 72px);
+  color: var(--bv-text);
+}
+
+.logo-en {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: clamp(40px, 9vw, 72px);
+  color: var(--bv-text);
+}
+
+.logo-wave-wrap {
+  opacity: 0;
+  animation: fadeIn 1s ease 1.8s forwards;
+  margin-top: 4px;
+}
+
+.tagline {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--bv-text-dim);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-top: 40px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 2.2s forwards;
+}
+
+/* Scroll cue */
+.scroll-cue {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  animation: fadeIn 1s ease 3s forwards;
+}
+
+.scroll-cue span {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--bv-text-dim);
+}
+
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--bv-lime), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+
+/* ══════════════════════════════════════
+   Statement
+   ══════════════════════════════════════ */
+.statement {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.stmt-line {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: clamp(28px, 6vw, 56px);
+  line-height: 1.3;
+  opacity: 0;
+  transform: translateY(50px);
+  transition: opacity 1s ease, transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stmt-line.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.stmt-line .grad {
+  background: linear-gradient(135deg, var(--bv-lime), var(--bv-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stmt-sub {
+  font-size: 14px;
+  color: var(--bv-text-dim);
+  margin-top: 24px;
+  letter-spacing: 1px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s;
+}
+
+.stmt-sub.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ══════════════════════════════════════
+   KV Carousel
+   ══════════════════════════════════════ */
+.kv-section {
+  padding: 0 0 80px;
+  max-width: 100%;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.kv-section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.carousel-wrap {
+  position: relative;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.carousel-viewport {
+  overflow: hidden;
+  border-radius: 20px;
+  position: relative;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.carousel-slide {
+  min-width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--bv-surface);
+  border: 1px solid var(--bv-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bv-text-dim);
+  font-size: 14px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Gradient border glow on viewport */
+.carousel-viewport::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(199,242,132,0.25), transparent 40%, transparent 60%, rgba(255,105,180,0.25));
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Slide number badge */
+.slide-num {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--bv-text-dim);
+  background: var(--bv-surface-alpha);
+  backdrop-filter: blur(6px);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--bv-border);
+}
+
+/* Nav buttons */
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bv-surface-alpha);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--bv-border);
+  color: var(--bv-text);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.3s, background 0.3s, transform 0.3s;
+  z-index: 2;
+}
+
+.carousel-btn:hover {
+  border-color: var(--bv-lime);
+  background: rgba(16, 30, 44, 0.95);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.carousel-btn-prev { left: -8px; }
+.carousel-btn-next { right: -8px; }
+
+@media (max-width: 960px) {
+  .carousel-btn-prev { left: 8px; }
+  .carousel-btn-next { right: 8px; }
+}
+
+/* Dots */
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bv-border);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+}
+
+.carousel-dot.active {
+  background: var(--bv-lime);
+  transform: scale(1.3);
+  box-shadow: 0 0 10px rgba(199, 242, 132, 0.4);
+}
+
+.carousel-dot:hover:not(.active) {
+  background: var(--bv-text-dim);
+}
+
+/* ══════════════════════════════════════
+   PFP Gallery
+   ══════════════════════════════════════ */
+.pfp-section {
+  padding: 0 24px 80px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--bv-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  text-align: center;
+  margin-bottom: 40px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.section-label.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pfp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 16px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.pfp-item {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--bv-surface);
+  border: 2px solid var(--bv-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s;
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.pfp-item.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.pfp-item:hover {
+  border-color: var(--bv-lime);
+  transform: scale(1.08) !important;
+  box-shadow: 0 0 24px rgba(199, 242, 132, 0.15);
+}
+
+/* Gradient ring on hover */
+.pfp-item::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--bv-lime), var(--bv-pink));
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.pfp-item:hover::after {
+  opacity: 1;
+}
+
+.pfp-placeholder {
+  font-size: 11px;
+  color: var(--bv-text-dim);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ══════════════════════════════════════
+   Sites — Grouped by type
+   ══════════════════════════════════════ */
+.sites-section {
+  padding: 40px 24px 60px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.sites-group {
+  margin-bottom: 48px;
+}
+
+.sites-group:last-child {
+  margin-bottom: 0;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.group-header.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.group-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.group-icon-doujin {
+  background: rgba(199, 242, 132, 0.1);
+  border: 1px solid rgba(199, 242, 132, 0.2);
+  color: var(--bv-lime);
+}
+
+.group-icon-video {
+  background: rgba(255, 105, 180, 0.1);
+  border: 1px solid rgba(255, 105, 180, 0.2);
+  color: var(--bv-pink);
+}
+
+.group-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--bv-text-muted);
+}
+
+.group-count {
+  font-size: 11px;
+  color: var(--bv-text-dim);
+  margin-left: auto;
+}
+
+.group-line {
+  flex: 1;
+  height: 1px;
+  background: var(--bv-border);
+}
+
+.sites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.site-card {
+  position: relative;
+  background: var(--bv-surface-alpha);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--bv-border);
+  border-radius: 14px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.site-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.site-card:hover {
+  transform: translateY(-6px) !important;
+  border-color: var(--bv-lime);
+}
+
+.site-card::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--bv-lime), var(--bv-pink), transparent);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.3s, left 0.3s, right 0.3s;
+}
+
+.site-card:hover::before {
+  opacity: 1;
+  left: 10%;
+  right: 10%;
+}
+
+.site-name {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.site-desc {
+  font-size: 12px;
+  color: var(--bv-text-muted);
+}
+
+.site-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.site-badge-doujin {
+  color: var(--bv-lime);
+}
+
+.site-badge-video {
+  color: var(--bv-pink);
+}
+
+.site-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.site-badge-doujin::before {
+  background: var(--bv-lime);
+  box-shadow: 0 0 8px var(--bv-lime);
+}
+
+.site-badge-video::before {
+  background: var(--bv-pink);
+  box-shadow: 0 0 8px var(--bv-pink);
+}
+
+/* ══════════════════════════════════════
+   SNS Links
+   ══════════════════════════════════════ */
+.sns-section {
+  padding: 0 24px 80px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.sns-list {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.sns-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 28px;
+  background: var(--bv-surface-alpha);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--bv-border);
+  border-radius: 12px;
+  transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  flex: 1;
+  max-width: 260px;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.sns-link.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sns-link:hover {
+  border-color: var(--bv-lime);
+  transform: translateY(-3px) !important;
+  box-shadow: 0 4px 20px rgba(199, 242, 132, 0.08);
+}
+
+.sns-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(199, 242, 132, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sns-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--bv-text);
+}
+
+.sns-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sns-name {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.sns-handle {
+  font-size: 11px;
+  color: var(--bv-text-dim);
+}
+
+/* ══════════════════════════════════════
+   CTA / Coming Soon
+   ══════════════════════════════════════ */
+.cta-section {
+  padding: 80px 24px 100px;
+  text-align: center;
+  position: relative;
+}
+
+.cta-divider {
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--bv-lime), var(--bv-pink));
+  margin: 0 auto 48px;
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.cta-divider.visible { opacity: 1; }
+
+.cta-heading {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: clamp(24px, 5vw, 40px);
+  line-height: 1.3;
+  margin-bottom: 20px;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 1s ease, transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cta-heading.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cta-heading .grad {
+  background: linear-gradient(135deg, var(--bv-lime), var(--bv-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cta-sub {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
+  font-size: 15px;
+  color: var(--bv-text-muted);
+  max-width: 480px;
+  margin: 0 auto 32px;
+  line-height: 1.7;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease 0.3s, transform 0.8s ease 0.3s;
+}
+
+.cta-sub.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border: 1px solid var(--bv-border);
+  border-radius: 100px;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--bv-text-dim);
+  opacity: 0;
+  transition: opacity 0.8s ease 0.6s;
+}
+
+.cta-badge.visible { opacity: 1; }
+
+.cta-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bv-lime);
+  box-shadow: 0 0 8px var(--bv-lime);
+  animation: ctaPulse 2s ease-in-out infinite;
+}
+
+/* ══════════════════════════════════════
+   Footer
+   ══════════════════════════════════════ */
+footer {
+  text-align: center;
+  padding: 32px 24px;
+  font-size: 11px;
+  color: var(--bv-text-dim);
+  border-top: 1px solid var(--bv-border);
+  position: relative;
+  z-index: 1;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.footer-jp {
+  font-family: 'M PLUS 1p', sans-serif;
+  font-weight: 900;
+  font-size: 14px;
+  color: var(--bv-text-dim);
+}
+
+.footer-en {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 14px;
+  color: var(--bv-text-dim);
+}
+
+/* ══════════════════════════════════════
+   Animations
+   ══════════════════════════════════════ */
+@keyframes heroReveal {
+  0% { opacity: 0; transform: translateY(30px) scale(0.97); filter: blur(8px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+
+@keyframes waveDash {
+  from { stroke-dashoffset: 400; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes ctaPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+/* ══════════════════════════════════════
+   Responsive
+   ══════════════════════════════════════ */
+@media (max-width: 600px) {
+  .sns-list {
+    flex-direction: column;
+    align-items: center;
+  }
+  .sns-link {
+    max-width: 100%;
+    width: 100%;
+  }
+  .pfp-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 12px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="concept-badge">
+  <strong>Mock D v3</strong> &mdash; Waveform &mdash; Three.js 3D波形空間
+</div>
+
+<!-- Three.js canvas -->
+<canvas id="three-canvas"></canvas>
+
+<div class="content">
+
+  <!-- ══════ Hero ══════ -->
+  <section class="hero">
+    <div class="logo-main">
+      <span class="logo-jp">美少女</span><span class="logo-en">Vibes</span>
+    </div>
+    <div class="logo-wave-wrap">
+      <svg id="logo-wave" xmlns="http://www.w3.org/2000/svg" height="30" overflow="visible">
+        <defs>
+          <linearGradient id="wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#c7f284"/>
+            <stop offset="100%" stop-color="#ff69b4"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <p class="tagline">Your vibe starts here.</p>
+
+    <div class="scroll-cue">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- ══════ Statement ══════ -->
+  <section class="statement">
+    <div class="stmt-line" data-reveal>8 sites.</div>
+    <div class="stmt-line" data-reveal style="transition-delay:0.15s"><span class="grad">One vibe.</span></div>
+    <p class="stmt-sub" data-reveal>A network pulsing in sync.</p>
+  </section>
+
+  <!-- ══════ KV Carousel ══════ -->
+  <section class="kv-section" data-reveal>
+    <div class="carousel-wrap">
+      <div class="carousel-viewport">
+        <div class="carousel-track" id="carousel-track">
+          <div class="carousel-slide"><span class="slide-num">01 / 05</span>Key Visual 1 — Step 3 で差し替え</div>
+          <div class="carousel-slide"><span class="slide-num">02 / 05</span>Key Visual 2 — Step 3 で差し替え</div>
+          <div class="carousel-slide"><span class="slide-num">03 / 05</span>Key Visual 3 — Step 3 で差し替え</div>
+          <div class="carousel-slide"><span class="slide-num">04 / 05</span>Key Visual 4 — Step 3 で差し替え</div>
+          <div class="carousel-slide"><span class="slide-num">05 / 05</span>Key Visual 5 — Step 3 で差し替え</div>
+        </div>
+      </div>
+      <button class="carousel-btn carousel-btn-prev" id="carousel-prev">&larr;</button>
+      <button class="carousel-btn carousel-btn-next" id="carousel-next">&rarr;</button>
+      <div class="carousel-dots" id="carousel-dots"></div>
+    </div>
+  </section>
+
+  <!-- ══════ Girl PFP Gallery ══════ -->
+  <section class="pfp-section">
+    <h2 class="section-label" data-reveal>Girls</h2>
+    <div class="pfp-grid" id="pfp-grid"></div>
+  </section>
+
+  <!-- ══════ Sites — Doujin ══════ -->
+  <section class="sites-section">
+    <div class="sites-group" id="group-doujin">
+      <div class="group-header" data-reveal>
+        <div class="group-icon group-icon-doujin">&#9670;</div>
+        <span class="group-title">Doujin</span>
+        <div class="group-line"></div>
+        <span class="group-count">6 sites</span>
+      </div>
+      <div class="sites-grid" id="grid-doujin"></div>
+    </div>
+
+    <!-- ══════ Sites — Video ══════ -->
+    <div class="sites-group" id="group-video">
+      <div class="group-header" data-reveal>
+        <div class="group-icon group-icon-video">&#9654;</div>
+        <span class="group-title">Video</span>
+        <div class="group-line"></div>
+        <span class="group-count">2 sites</span>
+      </div>
+      <div class="sites-grid" id="grid-video"></div>
+    </div>
+  </section>
+
+  <!-- ══════ SNS Links ══════ -->
+  <section class="sns-section">
+    <h2 class="section-label" data-reveal>Follow</h2>
+    <div class="sns-list">
+      <a class="sns-link" data-reveal href="https://x.com/BishojoVibes" rel="noopener" target="_blank">
+        <div class="sns-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </div>
+        <div class="sns-info">
+          <span class="sns-name">X (Twitter)</span>
+          <span class="sns-handle">@BishojoVibes</span>
+        </div>
+      </a>
+      <a class="sns-link" data-reveal style="transition-delay:0.1s" href="#" rel="noopener" target="_blank">
+        <div class="sns-icon">
+          <svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+            <path fill="currentColor" d="M1033.05,324.45c-0.19-137.9-107.59-250.92-233.6-291.7c-156.48-50.64-362.86-43.3-512.28,27.2C106.07,145.41,49.18,332.61,47.06,519.31c-1.74,153.5,13.58,557.79,241.62,560.67c169.44,2.15,194.67-216.18,273.07-321.33c55.78-74.81,127.6-95.94,216.01-117.82C929.71,603.22,1033.27,483.3,1033.05,324.45z"/>
+          </svg>
+        </div>
+        <div class="sns-info">
+          <span class="sns-name">Patreon</span>
+          <span class="sns-handle">Coming soon</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ══════ CTA / Coming Soon ══════ -->
+  <section class="cta-section">
+    <div class="cta-divider" data-reveal></div>
+    <div class="cta-heading" data-reveal>
+      Something <span class="grad">bigger</span><br>is coming.
+    </div>
+    <p class="cta-sub" data-reveal>
+      Profiles. Badges. Gacha. Leaderboards.<br>
+      The full 美少女Vibes experience — soon.
+    </p>
+    <div class="cta-badge" data-reveal>
+      <span class="cta-dot"></span>
+      In Development
+    </div>
+  </section>
+
+  <!-- ══════ Footer ══════ -->
+  <footer>
+    <div class="footer-logo">
+      <span class="footer-jp">美少女</span><span class="footer-en">Vibes</span>
+    </div>
+    <p>&copy; 2026 Bishojo Vibes</p>
+  </footer>
+
+</div>
+
+<!-- Three.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ══════════════════════════════════════
+// Three.js — 3D Waveform Terrain
+// ══════════════════════════════════════
+(function() {
+  const canvas = document.getElementById('three-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 3, 5);
+  camera.lookAt(0, 0, 0);
+
+  const geo = new THREE.PlaneGeometry(20, 20, 128, 128);
+  geo.rotateX(-Math.PI * 0.5);
+
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uMouse: { value: new THREE.Vector2(0, 0) },
+      uLime: { value: new THREE.Color('#c7f284') },
+      uPink: { value: new THREE.Color('#ff69b4') },
+      uScroll: { value: 0 },
+    },
+    vertexShader: `
+      uniform float uTime;
+      uniform vec2 uMouse;
+      uniform float uScroll;
+      varying float vHeight;
+      varying vec2 vUv;
+
+      void main() {
+        vUv = uv;
+        vec3 pos = position;
+
+        float wave1 = sin(pos.x * 0.8 + uTime * 0.4) * cos(pos.z * 0.6 + uTime * 0.3) * 0.5;
+        float wave2 = sin(pos.x * 1.5 + uTime * 0.7 + 1.0) * sin(pos.z * 1.2 + uTime * 0.5) * 0.25;
+        float wave3 = cos(pos.x * 2.5 + uTime * 1.0) * sin(pos.z * 2.0 + uTime * 0.8) * 0.12;
+
+        float dist = length(pos.xz - uMouse * 6.0);
+        float mouseWave = exp(-dist * 0.3) * sin(dist * 2.0 - uTime * 3.0) * 0.6;
+
+        pos.y = wave1 + wave2 + wave3 + mouseWave;
+        pos.y *= max(0.3, 1.0 - uScroll * 0.5);
+
+        vHeight = pos.y;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uLime;
+      uniform vec3 uPink;
+      uniform float uTime;
+      varying float vHeight;
+      varying vec2 vUv;
+
+      void main() {
+        float t = smoothstep(-0.6, 0.8, vHeight) * 0.7 + vUv.x * 0.3;
+        vec3 color = mix(uLime, uPink, t);
+
+        float lineX = abs(fract(vUv.x * 64.0) - 0.5) * 2.0;
+        float lineZ = abs(fract(vUv.y * 64.0) - 0.5) * 2.0;
+        float line = min(lineX, lineZ);
+        float wireAlpha = smoothstep(0.0, 0.08, line);
+
+        float alpha = mix(0.6, 0.04, wireAlpha);
+        alpha *= smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.7, vUv.x);
+        alpha *= smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+
+        gl_FragColor = vec4(color, alpha);
+      }
+    `,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  scene.add(mesh);
+
+  const mouse = { x: 0, y: 0 };
+  window.addEventListener('mousemove', (e) => {
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  });
+
+  let scrollY = 0;
+  window.addEventListener('scroll', () => {
+    scrollY = window.scrollY / window.innerHeight;
+  });
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  function animate() {
+    requestAnimationFrame(animate);
+    mat.uniforms.uTime.value += 0.016;
+    mat.uniforms.uMouse.value.set(
+      mouse.x + (mat.uniforms.uMouse.value.x - mouse.x) * 0.95,
+      mouse.y + (mat.uniforms.uMouse.value.y - mouse.y) * 0.95,
+    );
+    mat.uniforms.uScroll.value += (scrollY - mat.uniforms.uScroll.value) * 0.05;
+
+    camera.position.x = Math.sin(mat.uniforms.uTime.value * 0.1) * 0.3;
+    camera.lookAt(0, 0, 0);
+
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+
+// ══════════════════════════════════════
+// Logo wave
+// ══════════════════════════════════════
+function initLogoWave() {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const PHI = 1 / (1 + 1.618);
+  const logoMain = document.querySelector('.logo-main');
+  const svgEl = document.getElementById('logo-wave');
+  if (!logoMain || !svgEl) return;
+
+  const w = logoMain.getBoundingClientRect().width;
+  svgEl.setAttribute('width', String(w));
+  svgEl.setAttribute('viewBox', `0 0 ${w} 30`);
+
+  const y = 15, c = w * PHI;
+  const pts = [
+    [0, y], [c-24, y], [c-16, y],
+    [c-8, 5], [c, 25], [c+8, 10],
+    [c+16, y], [w, y],
+  ];
+
+  const poly = document.createElementNS(svgNS, 'polyline');
+  poly.setAttribute('points', pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' '));
+  poly.setAttribute('stroke', 'url(#wave-grad)');
+  poly.setAttribute('stroke-width', '7');
+  poly.setAttribute('fill', 'none');
+  poly.setAttribute('stroke-linecap', 'round');
+  poly.setAttribute('stroke-linejoin', 'round');
+
+  const len = w + 60;
+  poly.setAttribute('stroke-dasharray', String(len));
+  poly.setAttribute('stroke-dashoffset', String(len));
+  poly.style.animation = 'waveDash 2s cubic-bezier(0.16, 1, 0.3, 1) 1.5s forwards';
+  svgEl.appendChild(poly);
+}
+
+// ══════════════════════════════════════
+// Scroll reveal
+// ══════════════════════════════════════
+function initReveal() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add('visible');
+    });
+  }, { threshold: 0.15 });
+
+  document.querySelectorAll('[data-reveal]').forEach(el => observer.observe(el));
+}
+
+// ══════════════════════════════════════
+// PFP Gallery (placeholder)
+// ══════════════════════════════════════
+function renderPFPs() {
+  const names = ['Miku', 'Rin', 'Sakura', 'Yuki', 'Hana'];
+  const grid = document.getElementById('pfp-grid');
+
+  names.forEach((name, i) => {
+    const item = document.createElement('div');
+    item.className = 'pfp-item';
+    item.setAttribute('data-reveal', '');
+    item.style.transitionDelay = `${i * 0.08}s`;
+    item.innerHTML = `<span class="pfp-placeholder">${name}</span>`;
+    grid.appendChild(item);
+  });
+}
+
+// ══════════════════════════════════════
+// Sites — grouped
+// ══════════════════════════════════════
+function renderSites() {
+  const doujin = [
+    { name: 'Futanari Heaven', desc: '無料ふたなり同人天国', url: 'https://futanari-heaven.com/' },
+    { name: 'Tentacle Heaven', desc: '無料触手同人天国', url: 'https://tentacle-heaven.com/' },
+    { name: 'Parody Heaven', desc: '無料パロディ同人天国', url: 'https://parody-heaven.com/' },
+    { name: 'NTR Heaven', desc: '無料NTR同人天国', url: 'https://ntr-heaven.com/' },
+    { name: 'Ishukan Heaven', desc: '無料異種姦同人天国', url: 'https://ishukan-heaven.com/' },
+    { name: 'Saimin Heaven', desc: '無料催眠同人天国', url: 'https://saimin-heaven.com/' },
+  ];
+
+  const video = [
+    { name: 'Gero Heaven', desc: '無料ゲロイラマ天国', url: 'https://gero-heaven.com/' },
+    { name: 'Gokkun Heaven', desc: '無料ごっくん動画天国', url: 'https://gokkun-heaven.com/' },
+  ];
+
+  function renderGroup(sites, gridId, type, badgeClass) {
+    const grid = document.getElementById(gridId);
+    sites.forEach((s, i) => {
+      const card = document.createElement('a');
+      card.className = 'site-card';
+      card.href = s.url;
+      card.rel = 'noopener';
+      card.setAttribute('data-reveal', '');
+      card.style.transitionDelay = `${i * 0.07}s`;
+      card.innerHTML = `
+        <div class="site-name">${s.name}</div>
+        <div class="site-desc">${s.desc}</div>
+        <span class="site-badge ${badgeClass}">${type}</span>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  renderGroup(doujin, 'grid-doujin', 'Doujin', 'site-badge-doujin');
+  renderGroup(video, 'grid-video', 'Video', 'site-badge-video');
+}
+
+// ══════════════════════════════════════
+// Carousel
+// ══════════════════════════════════════
+function initCarousel() {
+  const track = document.getElementById('carousel-track');
+  const slides = track.querySelectorAll('.carousel-slide');
+  const dotsWrap = document.getElementById('carousel-dots');
+  const prevBtn = document.getElementById('carousel-prev');
+  const nextBtn = document.getElementById('carousel-next');
+  const total = slides.length;
+  let current = 0;
+  let autoTimer;
+
+  // Create dots
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('button');
+    dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(dot);
+  }
+
+  function goTo(idx) {
+    current = ((idx % total) + total) % total;
+    track.style.transform = `translateX(-${current * 100}%)`;
+    const dots = dotsWrap.querySelectorAll('.carousel-dot');
+    dots.forEach((d, i) => d.classList.toggle('active', i === current));
+    resetAuto();
+  }
+
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => goTo(current + 1));
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') goTo(current - 1);
+    if (e.key === 'ArrowRight') goTo(current + 1);
+  });
+
+  // Touch swipe
+  let touchStartX = 0;
+  track.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  track.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) goTo(current + (diff > 0 ? 1 : -1));
+  }, { passive: true });
+
+  // Auto-advance
+  function resetAuto() {
+    clearInterval(autoTimer);
+    autoTimer = setInterval(() => goTo(current + 1), 5000);
+  }
+  resetAuto();
+}
+
+// ══════════════════════════════════════
+// Init
+// ══════════════════════════════════════
+document.fonts.ready.then(() => {
+  initLogoWave();
+  initCarousel();
+  renderPFPs();
+  renderSites();
+  setTimeout(initReveal, 100);
+});
+</script>
+</body>
+</html>
