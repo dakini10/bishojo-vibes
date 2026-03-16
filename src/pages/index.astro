@@ -45,6 +45,18 @@ const videoSites = [
         </svg>
       </div>
       <p class="tagline">Your vibe starts here.</p>
+      <div class="hero-sns">
+        <a href="https://x.com/BishojoVibes" class="sns-icon-link" data-label="X" rel="noopener" target="_blank">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+        </a>
+        <a href="https://www.pixiv.net/users/124479930" class="sns-icon-link" data-label="Pixiv" rel="noopener" target="_blank">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.935 0A4.924 4.924 0 0 0 0 4.935v14.13A4.924 4.924 0 0 0 4.935 24h14.13A4.924 4.924 0 0 0 24 19.065V4.935A4.924 4.924 0 0 0 19.065 0zm7.81 4.547c2.181 0 4.058.676 5.399 1.847a6.118 6.118 0 0 1 2.116 4.66c.005 1.854-.88 3.476-2.257 4.563-1.375 1.085-3.211 1.697-5.258 1.697-2.047 0-3.767-.7-5.142-1.785V20h-2.63V4.722h2.63v.96c1.375-1.085 3.095-1.135 5.142-1.135zm-.053 1.89c-1.494 0-2.762.459-3.744 1.254v6.484c.98.795 2.25 1.254 3.744 1.254 1.346 0 2.52-.459 3.39-1.254.87-.795 1.329-1.859 1.329-3.106 0-1.247-.459-2.336-1.329-3.131-.87-.795-2.044-1.5-3.39-1.5z" />
+          </svg>
+        </a>
+      </div>
       <div class="scroll-cue">
         <span>Scroll</span>
         <div class="scroll-line"></div>
@@ -153,20 +165,37 @@ const videoSites = [
       </div>
     </section>
 
-    <!-- SNS Links -->
-    <section class="sns-section">
+    <!-- Follow -->
+    <section class="follow-section">
       <h2 class="section-label" data-reveal>Follow</h2>
-      <div class="sns-list">
-        <a class="sns-link" data-reveal href="https://x.com/BishojoVibes" rel="noopener" target="_blank">
-          <div class="sns-icon">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-            </svg>
+      <div class="follow-list">
+        <a class="follow-card" data-reveal href="https://x.com/BishojoVibes" rel="noopener" target="_blank">
+          <div class="fc-icon">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
           </div>
-          <div class="sns-info">
-            <span class="sns-name">X (Twitter)</span>
-            <span class="sns-handle">@BishojoVibes</span>
+          <div class="fc-info">
+            <div class="fc-top">
+              <span class="fc-name">X (Twitter)</span>
+              <span class="fc-handle">@BishojoVibes</span>
+              <span class="fc-badge-free">Free</span>
+            </div>
+            <div class="fc-comment">SFWオリジナルAIイラストを毎日投稿中！サイバーパンク×？？？のエロかっこいい世界観がコンセプト👍</div>
           </div>
+          <span class="fc-arrow">&rarr;</span>
+        </a>
+        <a class="follow-card" data-reveal style="transition-delay:0.1s" href="https://www.pixiv.net/users/124479930" rel="noopener" target="_blank">
+          <div class="fc-icon">
+            <svg viewBox="0 0 24 24"><path d="M4.935 0A4.924 4.924 0 0 0 0 4.935v14.13A4.924 4.924 0 0 0 4.935 24h14.13A4.924 4.924 0 0 0 24 19.065V4.935A4.924 4.924 0 0 0 19.065 0zm7.81 4.547c2.181 0 4.058.676 5.399 1.847a6.118 6.118 0 0 1 2.116 4.66c.005 1.854-.88 3.476-2.257 4.563-1.375 1.085-3.211 1.697-5.258 1.697-2.047 0-3.767-.7-5.142-1.785V20h-2.63V4.722h2.63v.96c1.375-1.085 3.095-1.135 5.142-1.135zm-.053 1.89c-1.494 0-2.762.459-3.744 1.254v6.484c.98.795 2.25 1.254 3.744 1.254 1.346 0 2.52-.459 3.39-1.254.87-.795 1.329-1.859 1.329-3.106 0-1.247-.459-2.336-1.329-3.131-.87-.795-2.044-1.5-3.39-1.5z"/></svg>
+          </div>
+          <div class="fc-info">
+            <div class="fc-top">
+              <span class="fc-name">Pixiv</span>
+              <span class="fc-handle">bishojo-vibes</span>
+              <span class="fc-badge-free">Free</span>
+            </div>
+            <div class="fc-comment">オリジナルキャラクターのAIイラスト（SFW、Ecchi、NSFW）を厳選無料公開中🔥</div>
+          </div>
+          <span class="fc-arrow">&rarr;</span>
         </a>
       </div>
     </section>
@@ -746,10 +775,69 @@ const videoSites = [
     box-shadow: 0 0 8px var(--bv-pink);
   }
 
-  /* ── SNS Links ── */
-  .sns-section {
+  /* ── Hero SNS Icons ── */
+  .hero-sns {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 28px;
+    opacity: 0;
+    animation: fadeInUp 0.6s ease 1.0s forwards;
+  }
+
+  .sns-icon-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(232, 230, 227, 0.5);
+    color: var(--bv-text);
+    transition: all 0.3s;
+    position: relative;
+  }
+
+  .sns-icon-link svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+
+  .sns-icon-link:hover {
+    color: #ffffff;
+    border-color: #ffffff;
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.2), 0 0 28px rgba(199, 242, 132, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .sns-icon-link::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    font-family: var(--font-brand);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--bv-text-dim);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+  }
+
+  .sns-icon-link:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── Follow Section ── */
+  .follow-section {
     padding: 0 24px 80px;
-    max-width: 600px;
+    max-width: 700px;
     margin: 0 auto;
   }
 
@@ -772,42 +860,41 @@ const videoSites = [
     transform: translateY(0);
   }
 
-  .sns-list {
+  .follow-list {
     display: flex;
-    justify-content: center;
-    gap: 16px;
+    flex-direction: column;
+    gap: 14px;
   }
 
-  .sns-link {
+  .follow-card {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px 28px;
+    gap: 16px;
+    padding: 18px 24px;
     background: var(--bv-surface-alpha);
     backdrop-filter: blur(8px);
     border: 1px solid var(--bv-border);
-    border-radius: 12px;
+    border-radius: 14px;
     transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
-    max-width: 260px;
     opacity: 0;
     transform: translateY(20px);
   }
 
-  .sns-link.visible {
+  .follow-card.visible {
     opacity: 1;
     transform: translateY(0);
   }
 
-  .sns-link:hover {
+  .follow-card:hover {
     border-color: var(--bv-lime);
     transform: translateY(-3px) !important;
     box-shadow: 0 4px 20px rgba(199, 242, 132, 0.08);
   }
 
-  .sns-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
+  .fc-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
     background: rgba(199, 242, 132, 0.08);
     display: flex;
     align-items: center;
@@ -815,27 +902,69 @@ const videoSites = [
     flex-shrink: 0;
   }
 
-  .sns-icon svg {
+  .fc-icon svg {
     width: 18px;
     height: 18px;
     fill: var(--bv-text);
   }
 
-  .sns-info {
+  .fc-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
   }
 
-  .sns-name {
+  .fc-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .fc-name {
     font-family: var(--font-brand);
     font-weight: 700;
     font-size: 14px;
   }
 
-  .sns-handle {
+  .fc-handle {
     font-size: 11px;
     color: var(--bv-text-dim);
+  }
+
+  .fc-badge-free {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(199, 242, 132, 0.12);
+    border: 1px solid rgba(199, 242, 132, 0.25);
+    font-family: var(--font-brand);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--bv-lime);
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .fc-comment {
+    font-size: 12px;
+    color: var(--bv-text-muted);
+    line-height: 1.5;
+  }
+
+  .fc-arrow {
+    color: var(--bv-text-dim);
+    font-size: 14px;
+    flex-shrink: 0;
+    transition: color 0.3s, transform 0.3s;
+  }
+
+  .follow-card:hover .fc-arrow {
+    color: var(--bv-lime);
+    transform: translateX(3px);
   }
 
   /* ── CTA ── */
@@ -990,13 +1119,9 @@ const videoSites = [
       font-size: 16px;
       letter-spacing: 1px;
     }
-    .sns-list {
-      flex-direction: column;
-      align-items: center;
-    }
-    .sns-link {
-      max-width: 100%;
-      width: 100%;
+    .fc-top {
+      flex-wrap: wrap;
+      gap: 4px;
     }
   }
 </style>
